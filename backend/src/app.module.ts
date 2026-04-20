@@ -4,6 +4,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { AuthController } from './auth/auth.controller';
+import { AuthService } from './auth/auth.service';
 
 @Module({
   imports: [
@@ -13,7 +15,7 @@ import { AuthModule } from './auth/auth.module';
     }),
 
     // Connect to PostgreSQL asynchronously using the ConfigService
-    /*TypeOrmModule.forRootAsync({
+    TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
@@ -26,13 +28,13 @@ import { AuthModule } from './auth/auth.module';
         autoLoadEntities: true,
         synchronize: true, // Note: Set to false in production to avoid data loss
       }),
-    }),*/
+    }),
 
     AuthModule,
 
     // Eventually add AuthModule, UsersModule, and TicketsModule here
   ],
-  controllers: [AppController],
-  providers: [AppService],
+  controllers: [AppController, AuthController],
+  providers: [AppService, AuthService],
 })
 export class AppModule {}
