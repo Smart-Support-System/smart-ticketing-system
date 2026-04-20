@@ -201,6 +201,48 @@ export default function Home() {
     }
   }
 
+  async function handleDeleteTicket() {
+    if (!selectedTicket) {
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${selectedTicket.title}"?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+
+      const response = await fetch(
+        `${API_BASE_URL}/tickets/${selectedTicket.id}`,
+        {
+          method: "DELETE",
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete ticket.");
+      }
+
+      const remainingTickets = tickets.filter(
+        (ticket) => ticket.id !== selectedTicket.id
+      );
+
+      setTickets(remainingTickets);
+      setSelectedTicketId(
+        remainingTickets.length > 0 ? remainingTickets[0].id : null
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Something went wrong."
+      );
+    }
+  }
+
   function formatDate(dateString: string) {
     return new Date(dateString).toLocaleString();
   }
@@ -536,6 +578,13 @@ export default function Home() {
                   <option value="closed">Closed</option>
                 </select>
               </div>
+              <button
+                type="button"
+                onClick={() => void handleDeleteTicket()}
+                className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700"
+              >
+                Delete Ticket
+              </button>
             </div>
           ) : (
             <p className="mt-5 text-sm text-gray-600">
