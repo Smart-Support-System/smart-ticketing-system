@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
 
 @Module({
   imports: [
@@ -12,7 +13,7 @@ import { AppService } from './app.service';
     }),
 
     // Connect to PostgreSQL asynchronously using the ConfigService
-    TypeOrmModule.forRootAsync({
+    /*TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         type: 'postgres',
@@ -22,10 +23,12 @@ import { AppService } from './app.service';
         username: config.get<string>('DB_USERNAME', 'user'),
         password: config.get<string>('DB_PASSWORD', 'password'),
         database: config.get<string>('DB_NAME', 'smart_support_db'),
-        autoLoadEntities: true, 
+        autoLoadEntities: true,
         synchronize: true, // Note: Set to false in production to avoid data loss
       }),
-    }),
+    }),*/
+
+    AuthModule,
 
     // Eventually add AuthModule, UsersModule, and TicketsModule here
   ],
