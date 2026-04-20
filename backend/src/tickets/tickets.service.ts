@@ -43,4 +43,16 @@ export class TicketsService {
     ticket.status = updateTicketStatusDto.status;
     return ticket;
   }
+
+  remove(id: number): { message: string } {
+    const ticketIndex = this.tickets.findIndex((ticket) => ticket.id === id);
+
+    if (ticketIndex === -1) {
+      throw new NotFoundException(`Ticket with ID ${id} not found`);
+    }
+
+    this.tickets.splice(ticketIndex, 1);
+
+    return { message: `Ticket with ID ${id} deleted successfully` };
+  }
 }

@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -37,5 +38,10 @@ export class TicketsController {
     @Body() updateTicketStatusDto: UpdateTicketStatusDto,
   ): Ticket {
     return this.ticketsService.updateStatus(id, updateTicketStatusDto);
+  }
+
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id: number): { message: string } {
+    return this.ticketsService.remove(id);
   }
 }
