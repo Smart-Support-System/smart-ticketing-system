@@ -10,7 +10,7 @@ type Ticket = {
   description: string;
   customerName: string;
   customerEmail: string;
-  priority: TicketPriority;
+  // priority: TicketPriority;
   status: TicketStatus;
   createdAt: string;
 };
@@ -46,7 +46,7 @@ export default function Home() {
     description: "",
     customerName: "",
     customerEmail: "",
-    priority: "medium",
+    // priority: "medium",
   });
 
   async function fetchTickets() {
@@ -149,7 +149,7 @@ export default function Home() {
         description: "",
         customerName: "",
         customerEmail: "",
-        priority: "medium",
+        // priority: "medium",
       });
     } catch (error) {
       setErrorMessage(
@@ -422,6 +422,7 @@ export default function Home() {
                   </div>
                 </div>
 
+                {/* commented out Priority - will add for Agents/Admins
                 <div>
                   <label
                     htmlFor="priority"
@@ -441,6 +442,7 @@ export default function Home() {
                     <option value="high">High</option>
                   </select>
                 </div>
+                */}
 
                 <button
                   type="submit"
@@ -469,9 +471,11 @@ export default function Home() {
                       <h3 className="text-3xl font-bold text-gray-900">
                         {selectedTicket.title}
                       </h3>
+                      {/* removed Priority for UI - will add for Agents/Admins
                       <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
                         {selectedTicket.priority} priority
                       </span>
+                      */}
                     </div>
 
                     <p className="mt-2 text-sm text-gray-500">
