@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS users(
     user_id INTEGER PRIMARY KEY,
     name TEXT,
-    password_hash TEXT,
+    password_hash BYTEA,
     is_approved BOOLEAN
 );
 
