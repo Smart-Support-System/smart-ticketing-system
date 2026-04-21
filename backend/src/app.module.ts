@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
+import { LocalStrategy } from './auth/local.strategy';
 
 @Module({
   imports: [
@@ -35,6 +36,6 @@ import { AuthService } from './auth/auth.service';
     // Eventually add AuthModule, UsersModule, and TicketsModule here
   ],
   controllers: [AppController, AuthController],
-  providers: [AppService, AuthService],
+  providers: [AppService, AuthService, LocalStrategy],
 })
 export class AppModule {}
