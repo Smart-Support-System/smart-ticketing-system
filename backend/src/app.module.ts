@@ -37,7 +37,7 @@ import { TicketsModule } from './tickets/tickets.module';
 
     // Eventually add AuthModule, UsersModule, and TicketsModule here
   ],
-  controllers: [AppController, AuthController],
-  providers: [AppService, AuthService, LocalStrategy],
+  controllers: [AppController],
+  providers: [AppService],
 })
 export class AppModule {}
