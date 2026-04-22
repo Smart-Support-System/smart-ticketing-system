@@ -13,3 +13,9 @@ body {
     color-scheme: dark;
   }
 }
+
+input,
+textarea,
+select {
+  @apply text-gray-900 bg-white;
+}

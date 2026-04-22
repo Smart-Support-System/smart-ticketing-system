@@ -7,6 +7,7 @@ import { AuthModule } from './auth/auth.module';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { LocalStrategy } from './auth/local.strategy';
+import { TicketsModule } from './tickets/tickets.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { LocalStrategy } from './auth/local.strategy';
     }),
 
     AuthModule,
+    TicketsModule,
 
     // Eventually add AuthModule, UsersModule, and TicketsModule here
   ],

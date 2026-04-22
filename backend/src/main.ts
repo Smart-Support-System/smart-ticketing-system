@@ -14,6 +14,7 @@ async function bootstrap() {
       cookie: { secure: false }, // should be true in production
     }),
   );
+  app.enableCors();
 
   await app.listen(process.env.PORT ?? 3000);
 }
