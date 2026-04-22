@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { User } from '../users/user.entity';
+import { User } from '../users/users.entity';
 import * as bcrypt from 'bcrypt';
 
 @Injectable()
@@ -19,7 +19,7 @@ export class AuthService {
     const newUser = this.usersRepository.create({
       email: email,
       name: name,
-      password_hash: Buffer.from(hash), // Convert string hash to Buffer for BYTEA
+      password_hash: Buffer.from(hash, 'utf-8'),
       is_approved: false,
     });
 
@@ -27,13 +27,13 @@ export class AuthService {
     return await this.usersRepository.save(newUser);
   }
 
-  async login(email: string, pass: string) {
-    const user = await this.usersRepository.findOne({ where: { email } }); // Find user by email
+  async validateUser(email: string, pass: string) {
+    const user = await this.usersRepository.findOne({ where: { email } });
 
     // Compare provided password with stored hash
-    if (user && await bcrypt.compare(pass, user.password_hash.toString())) {
-      return user; // Authentication successful
+    if (user && await bcrypt.compare(pass, user.password_hash.toString('utf-8'))) {
+      return user;
     }
-    return null; // Authentication failed
+    return null;
   }
 }
