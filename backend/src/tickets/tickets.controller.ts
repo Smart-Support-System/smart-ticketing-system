@@ -18,17 +18,17 @@ export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
   @Post()
-  create(@Body() createTicketDto: CreateTicketDto): Ticket {
+  create(@Body() createTicketDto: CreateTicketDto): Promise<Ticket> {
     return this.ticketsService.create(createTicketDto);
   }
 
   @Get()
-  findAll(): Ticket[] {
+  findAll(): Promise<Ticket[]> {
     return this.ticketsService.findAll();
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number): Ticket {
+  findOne(@Param('id', ParseIntPipe) id: number): Promise<Ticket> {
     return this.ticketsService.findOne(id);
   }
 
@@ -36,12 +36,14 @@ export class TicketsController {
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateTicketStatusDto: UpdateTicketStatusDto,
-  ): Ticket {
+  ): Promise<Ticket> {
     return this.ticketsService.updateStatus(id, updateTicketStatusDto);
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number): { message: string } {
+  remove(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<{ message: string }> {
     return this.ticketsService.remove(id);
   }
 }

@@ -1,57 +1,111 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
+import { TicketEntity } from './ticket.entity';
 import type { Ticket } from './interfaces/ticket.interface';
 
 @Injectable()
 export class TicketsService {
-  private tickets: Ticket[] = [];
-  private nextId = 1;
+  constructor(
+    @InjectRepository(TicketEntity)
+    private readonly ticketRepository: Repository<TicketEntity>,
+  ) {}
 
-  create(createTicketDto: CreateTicketDto): Ticket {
-    const newTicket: Ticket = {
-      id: this.nextId++,
+  private toFrontendTicket(ticket: TicketEntity): Ticket {
+    let frontendStatus: Ticket['status'];
+
+    if (ticket.ticketStatus === 'pending') {
+      frontendStatus = 'in-progress';
+    } else if (ticket.ticketStatus === 'closed') {
+      frontendStatus = 'closed';
+    } else {
+      frontendStatus = 'open';
+    }
+
+    return {
+      id: ticket.ticketId,
+      title: ticket.title,
+      description: ticket.description,
+      customerName: 'Unknown User',
+      customerEmail: 'unknown@example.com',
+      priority: ticket.ticketPriority ?? 'medium',
+      status: frontendStatus,
+      createdAt: ticket.createdDate?.toISOString() ?? new Date().toISOString(),
+    };
+}
+
+  private async getNextTicketId(): Promise<number> {
+    const result = await this.ticketRepository
+      .createQueryBuilder('ticket')
+      .select('MAX(ticket.ticketId)', 'max')
+      .getRawOne<{ max: number | null }>();
+
+    return (Number(result?.max) || 0) + 1;
+  }
+
+  async create(createTicketDto: CreateTicketDto): Promise<Ticket> {
+    const ticket = this.ticketRepository.create({
+      ticketId: await this.getNextTicketId(),
       title: createTicketDto.title,
       description: createTicketDto.description,
-      customerName: createTicketDto.customerName,
-      customerEmail: createTicketDto.customerEmail,
-      priority: createTicketDto.priority ?? 'medium',
-      status: 'open',
-      createdAt: new Date().toISOString(),
-    };
+      ticketPriority: createTicketDto.priority ?? 'medium',
+      ticketStatus: 'open',
+      createdDate: new Date(),
+    });
 
-    this.tickets.push(newTicket);
-    return newTicket;
+    const savedTicket = await this.ticketRepository.save(ticket);
+    return this.toFrontendTicket(savedTicket);
   }
 
-  findAll(): Ticket[] {
-    return this.tickets;
+  async findAll(): Promise<Ticket[]> {
+    const tickets = await this.ticketRepository.find({
+      order: { createdDate: 'DESC' },
+    });
+
+    return tickets.map((ticket) => this.toFrontendTicket(ticket));
   }
 
-  findOne(id: number): Ticket {
-    const ticket = this.tickets.find((t) => t.id === id);
+  async findOne(id: number): Promise<Ticket> {
+    const ticket = await this.ticketRepository.findOne({
+      where: { ticketId: id },
+    });
 
     if (!ticket) {
       throw new NotFoundException(`Ticket with ID ${id} not found`);
     }
 
-    return ticket;
+    return this.toFrontendTicket(ticket);
   }
 
-  updateStatus(id: number, updateTicketStatusDto: UpdateTicketStatusDto): Ticket {
-    const ticket = this.findOne(id);
-    ticket.status = updateTicketStatusDto.status;
-    return ticket;
-  }
+  async updateStatus(
+    id: number,
+    updateTicketStatusDto: UpdateTicketStatusDto,
+  ): Promise<Ticket> {
+    const ticket = await this.ticketRepository.findOne({
+      where: { ticketId: id },
+    });
 
-  remove(id: number): { message: string } {
-    const ticketIndex = this.tickets.findIndex((ticket) => ticket.id === id);
-
-    if (ticketIndex === -1) {
+    if (!ticket) {
       throw new NotFoundException(`Ticket with ID ${id} not found`);
     }
 
-    this.tickets.splice(ticketIndex, 1);
+    ticket.ticketStatus =
+      updateTicketStatusDto.status === 'in-progress'
+        ? 'pending'
+        : updateTicketStatusDto.status;
+
+    const updatedTicket = await this.ticketRepository.save(ticket);
+    return this.toFrontendTicket(updatedTicket);
+  }
+
+  async remove(id: number): Promise<{ message: string }> {
+    const result = await this.ticketRepository.delete({ ticketId: id });
+
+    if (result.affected === 0) {
+      throw new NotFoundException(`Ticket with ID ${id} not found`);
+    }
 
     return { message: `Ticket with ID ${id} deleted successfully` };
   }

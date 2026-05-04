@@ -28,7 +28,7 @@ import { TicketsModule } from './tickets/tickets.module';
         password: config.get<string>('DB_PASSWORD', 'password'),
         database: config.get<string>('DB_NAME', 'smart_support_db'),
         autoLoadEntities: true,
-        synchronize: true, // Note: Set to false in production to avoid data loss
+        synchronize: false, // Note: Set to false in production to avoid data loss
       }),
     }),
 
