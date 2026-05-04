@@ -3,16 +3,16 @@ import { Column, Entity, PrimaryColumn } from 'typeorm';
 @Entity('tickets')
 export class TicketEntity {
   @PrimaryColumn({ name: 'ticket_id', type: 'integer' })
-  ticketId: number;
+  ticketId!: number;
 
   @Column({ type: 'text', nullable: true })
-  title: string;
+  title!: string;
 
   @Column({ type: 'text', nullable: true })
-  description: string;
+  description!: string;
 
   @Column({ name: 'created_date', type: 'timestamptz', nullable: true })
-  createdDate: Date;
+  createdDate!: Date;
 
   @Column({
     name: 'ticket_priority',
@@ -21,7 +21,7 @@ export class TicketEntity {
     enumName: 'priority',
     nullable: true,
   })
-  ticketPriority: 'low' | 'medium' | 'high';
+  ticketPriority!: 'low' | 'medium' | 'high';
 
   @Column({
     name: 'ticket_status',
@@ -30,5 +30,5 @@ export class TicketEntity {
     enumName: 'status',
     nullable: true,
   })
-  ticketStatus: 'new' | 'open' | 'pending' | 'closed' | 'withdrawn';
+  ticketStatus!: 'new' | 'open' | 'pending' | 'closed' | 'withdrawn';
 }
