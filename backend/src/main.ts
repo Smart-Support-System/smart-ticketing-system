@@ -1,7 +1,7 @@
 import session from 'express-session';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { LocalStrategy } from './auth/local.strategy';
+//import { LocalStrategy } from './auth/local.strategy';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -14,7 +14,11 @@ async function bootstrap() {
       cookie: { secure: false }, // should be true in production
     }),
   );
-  app.enableCors();
+  
+  app.enableCors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  });
 
   await app.listen(process.env.PORT ?? 3000);
 }
