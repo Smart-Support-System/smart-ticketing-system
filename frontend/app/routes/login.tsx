@@ -37,6 +37,8 @@ export default function Login() {
 
       console.log('Logged in user:', data);
 
+      localStorage.setItem('currentUser', JSON.stringify(data.user));
+
       navigate('/home');
     } catch (err) {
       setError('Login failed. Check email/password.');

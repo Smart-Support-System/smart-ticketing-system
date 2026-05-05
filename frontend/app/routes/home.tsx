@@ -10,7 +10,7 @@ type Ticket = {
   description: string;
   customerName: string;
   customerEmail: string;
-  // priority: TicketPriority;
+  priority: TicketPriority;
   status: TicketStatus;
   createdAt: string;
 };
@@ -18,8 +18,6 @@ type Ticket = {
 type CreateTicketForm = {
   title: string;
   description: string;
-  customerName: string;
-  customerEmail: string;
   priority: TicketPriority;
 };
 
@@ -33,6 +31,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 export default function Home() {
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -41,12 +40,22 @@ export default function Home() {
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
 
+  useEffect(() => {
+    const storedUser = localStorage.getItem("currentUser");
+    if (storedUser) {
+      setCurrentUser(JSON.parse(storedUser));
+    }
+
+  }, []);
+
+  useEffect(() => {
+    void fetchTickets();
+  }, []);
+
   const [formData, setFormData] = useState<CreateTicketForm>({
     title: "",
     description: "",
-    customerName: "",
-    customerEmail: "",
-    // priority: "medium",
+    priority: "medium",
   });
 
   async function fetchTickets() {
@@ -130,7 +139,11 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          customerName: currentUser?.name ?? "",
+          customerEmail: currentUser?.email ?? "",
+        }),
       });
 
       if (!response.ok) {
@@ -147,9 +160,7 @@ export default function Home() {
       setFormData({
         title: "",
         description: "",
-        customerName: "",
-        customerEmail: "",
-        // priority: "medium",
+        priority: "medium",
       });
     } catch (error) {
       setErrorMessage(
@@ -286,6 +297,23 @@ export default function Home() {
               Ticket dashboard
             </p>
           </div>
+            {currentUser && (
+              <div className="mt-2 mb-4">
+                <p className="mt-1 text-sm text-gray-600">
+                  Logged in as {currentUser.name} ({currentUser.email})
+                </p>
+                
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("currentUser");
+                    window.location.href = "/";
+                  }}
+                  className="mt-4 w-2/3 rounded-xl bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                >
+                  Logout
+                </button>
+              </div>
+            )}
 
           <button
             type="button"
@@ -346,6 +374,11 @@ export default function Home() {
               <p className="mt-1 text-sm text-gray-600">
                 Submit a support request through the form below.
               </p>
+              {currentUser && (
+                <p className="mt-2 text-sm text-gray-600">
+                  Submitting as {currentUser.name} ({currentUser.email})
+                </p>
+              )}
 
               <form onSubmit={handleCreateTicket} className="mt-6 space-y-4">
                 <div>
@@ -384,6 +417,7 @@ export default function Home() {
                   />
                 </div>
 
+                {/* commented out Name and Email for ticket form inputs - automatically submit using login credentials
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label
@@ -421,6 +455,7 @@ export default function Home() {
                     />
                   </div>
                 </div>
+                */}
 
                 {/* commented out Priority - will add for Agents/Admins
                 <div>
