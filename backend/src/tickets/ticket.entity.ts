@@ -39,4 +39,7 @@ export class TicketEntity {
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'user_id' })
   user!: User | null;
+
+  @Column({ name: 'is_archived', type: 'boolean', default: false })
+  isArchived!: boolean;
 }

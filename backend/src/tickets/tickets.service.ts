@@ -6,6 +6,11 @@ import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import { TicketEntity } from './ticket.entity';
 import type { Ticket } from './interfaces/ticket.interface';
 
+type CurrentUser = {
+  user_id: number;
+  role: 'user' | 'agent' | 'admin';
+};
+
 @Injectable()
 export class TicketsService {
   constructor(
@@ -47,7 +52,7 @@ export class TicketsService {
 
   async create(
     createTicketDto: CreateTicketDto,
-    currentUser?: { user_id?: number },
+    currentUser: CurrentUser,
   ): Promise<Ticket> {
     const ticket = this.ticketRepository.create({
       ticketId: await this.getNextTicketId(),
@@ -56,7 +61,7 @@ export class TicketsService {
       ticketPriority: createTicketDto.priority ?? 'medium',
       ticketStatus: 'open',
       createdDate: new Date(),
-      userId: currentUser?.user_id ?? null,
+      userId: currentUser.user_id,
     });
 
     const savedTicket = await this.ticketRepository.save(ticket);
@@ -75,8 +80,14 @@ export class TicketsService {
     return this.toFrontendTicket(ticketWithUser);
   }
 
-  async findAll(): Promise<Ticket[]> {
+  async findAll(currentUser: CurrentUser): Promise<Ticket[]> {
+    const isStaff =
+      currentUser.role === 'agent' || currentUser.role === 'admin';
+
     const tickets = await this.ticketRepository.find({
+      where: isStaff
+        ? { isArchived: false }
+        : { userId: currentUser.user_id, isArchived: false },
       relations: ['user'],
       order: { createdDate: 'DESC' },
     });
@@ -84,7 +95,7 @@ export class TicketsService {
     return tickets.map((ticket) => this.toFrontendTicket(ticket));
   }
 
-  async findOne(id: number): Promise<Ticket> {
+  async findOne(id: number, currentUser: CurrentUser): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
       where: { ticketId: id },
       relations: ['user'],
@@ -94,12 +105,21 @@ export class TicketsService {
       throw new NotFoundException(`Ticket with ID ${id} not found`);
     }
 
+    const isOwner = ticket.userId === currentUser.user_id;
+    const isStaff =
+      currentUser.role === 'agent' || currentUser.role === 'admin';
+
+    if (!isOwner && !isStaff) {
+      throw new NotFoundException(`Ticket with ID ${id} not found`);
+    }
+
     return this.toFrontendTicket(ticket);
   }
 
   async updateStatus(
     id: number,
     updateTicketStatusDto: UpdateTicketStatusDto,
+    currentUser: CurrentUser,
   ): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
       where: { ticketId: id },
@@ -107,6 +127,13 @@ export class TicketsService {
     });
 
     if (!ticket) {
+      throw new NotFoundException(`Ticket with ID ${id} not found`);
+    }
+
+    const isStaff =
+      currentUser.role === 'agent' || currentUser.role === 'admin';
+
+    if (!isStaff) {
       throw new NotFoundException(`Ticket with ID ${id} not found`);
     }
 
@@ -131,13 +158,28 @@ export class TicketsService {
     return this.toFrontendTicket(ticketWithUser);
   }
 
-  async remove(id: number): Promise<{ message: string }> {
-    const result = await this.ticketRepository.delete({ ticketId: id });
+  async archive(
+    id: number,
+    currentUser: CurrentUser,
+  ): Promise<{ message: string }> {
+    const isStaff =
+      currentUser.role === 'agent' || currentUser.role === 'admin';
 
-    if (result.affected === 0) {
+    if (!isStaff) {
       throw new NotFoundException(`Ticket with ID ${id} not found`);
     }
 
-    return { message: `Ticket with ID ${id} deleted successfully` };
+    const ticket = await this.ticketRepository.findOne({
+      where: { ticketId: id },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException(`Ticket with ID ${id} not found`);
+    }
+
+    ticket.isArchived = true;
+    await this.ticketRepository.save(ticket);
+
+    return { message: `Ticket with ID ${id} archived successfully` };
   }
 }

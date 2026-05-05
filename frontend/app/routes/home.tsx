@@ -63,7 +63,9 @@ export default function Home() {
       setLoading(true);
       setErrorMessage("");
 
-      const response = await fetch(`${API_BASE_URL}/tickets`);
+      const response = await fetch(`${API_BASE_URL}/tickets`, {
+        credentials: "include",
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch tickets.");
       }
@@ -136,6 +138,7 @@ export default function Home() {
 
       const response = await fetch(`${API_BASE_URL}/tickets`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -184,6 +187,7 @@ export default function Home() {
         `${API_BASE_URL}/tickets/${selectedTicket.id}/status`,
         {
           method: "PATCH",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -232,6 +236,7 @@ export default function Home() {
         `${API_BASE_URL}/tickets/${selectedTicket.id}`,
         {
           method: "DELETE",
+          credentials: "include",
         }
       );
 

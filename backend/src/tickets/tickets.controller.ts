@@ -8,53 +8,55 @@ import {
   Patch,
   Post,
   Request,
+  UseGuards,
 } from '@nestjs/common';
+import { AuthGuard } from '../auth/auth.guard';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import type { Ticket } from './interfaces/ticket.interface';
 import { TicketsService } from './tickets.service';
 
+@UseGuards(AuthGuard)
 @Controller('tickets')
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
-  // TEMPORARY FIX FOR TESTING
   @Post()
-  create(@Body() createTicketDto: CreateTicketDto): Promise<Ticket> {
-    return this.ticketsService.create(createTicketDto, { user_id: 1 });
+  create(@Body() createTicketDto: CreateTicketDto, @Request() req): Promise<Ticket> {
+    return this.ticketsService.create(createTicketDto, req.session.user);
   }
-  /***
-  @Post()
-  create(
-    @Body() createTicketDto: CreateTicketDto,
-    @Request() req, any
-  ): Promise<Ticket> {
-    return this.ticketsService.create(createTicketDto, req.user);
-  }
-  **/
 
   @Get()
-  findAll(): Promise<Ticket[]> {
-    return this.ticketsService.findAll();
+  findAll(@Request() req): Promise<Ticket[]> {
+    return this.ticketsService.findAll(req.session.user);
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number): Promise<Ticket> {
-    return this.ticketsService.findOne(id);
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req,
+  ): Promise<Ticket> {
+    return this.ticketsService.findOne(id, req.session.user);
   }
 
   @Patch(':id/status')
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateTicketStatusDto: UpdateTicketStatusDto,
+    @Request() req,
   ): Promise<Ticket> {
-    return this.ticketsService.updateStatus(id, updateTicketStatusDto);
+    return this.ticketsService.updateStatus(
+      id,
+      updateTicketStatusDto,
+      req.session.user,
+    );
   }
 
   @Delete(':id')
-  remove(
+  archive(
     @Param('id', ParseIntPipe) id: number,
+    @Request() req,
   ): Promise<{ message: string }> {
-    return this.ticketsService.remove(id);
+    return this.ticketsService.archive(id, req.session.user);
   }
 }
