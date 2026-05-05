@@ -26,26 +26,29 @@ export class TicketsService {
 
     return {
       id: ticket.ticketId,
-      title: ticket.title,
-      description: ticket.description,
-      customerName: 'Unknown User',
-      customerEmail: 'unknown@example.com',
+      title: ticket.title ?? '',
+      description: ticket.description ?? '',
+      customerName: ticket.user?.name ?? 'Unknown User',
+      customerEmail: ticket.user?.email ?? 'unknown@example.com',
       priority: ticket.ticketPriority ?? 'medium',
       status: frontendStatus,
       createdAt: ticket.createdDate?.toISOString() ?? new Date().toISOString(),
     };
-}
+  }
 
   private async getNextTicketId(): Promise<number> {
     const result = await this.ticketRepository
       .createQueryBuilder('ticket')
       .select('MAX(ticket.ticketId)', 'max')
-      .getRawOne<{ max: number | null }>();
+      .getRawOne<{ max: string | number | null }>();
 
     return (Number(result?.max) || 0) + 1;
   }
 
-  async create(createTicketDto: CreateTicketDto): Promise<Ticket> {
+  async create(
+    createTicketDto: CreateTicketDto,
+    currentUser?: { user_id?: number },
+  ): Promise<Ticket> {
     const ticket = this.ticketRepository.create({
       ticketId: await this.getNextTicketId(),
       title: createTicketDto.title,
@@ -53,14 +56,28 @@ export class TicketsService {
       ticketPriority: createTicketDto.priority ?? 'medium',
       ticketStatus: 'open',
       createdDate: new Date(),
+      userId: currentUser?.user_id ?? null,
     });
 
     const savedTicket = await this.ticketRepository.save(ticket);
-    return this.toFrontendTicket(savedTicket);
+
+    const ticketWithUser = await this.ticketRepository.findOne({
+      where: { ticketId: savedTicket.ticketId },
+      relations: ['user'],
+    });
+
+    if (!ticketWithUser) {
+      throw new NotFoundException(
+        `Ticket with ID ${savedTicket.ticketId} not found`,
+      );
+    }
+
+    return this.toFrontendTicket(ticketWithUser);
   }
 
   async findAll(): Promise<Ticket[]> {
     const tickets = await this.ticketRepository.find({
+      relations: ['user'],
       order: { createdDate: 'DESC' },
     });
 
@@ -70,6 +87,7 @@ export class TicketsService {
   async findOne(id: number): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
       where: { ticketId: id },
+      relations: ['user'],
     });
 
     if (!ticket) {
@@ -85,6 +103,7 @@ export class TicketsService {
   ): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
       where: { ticketId: id },
+      relations: ['user'],
     });
 
     if (!ticket) {
@@ -97,7 +116,19 @@ export class TicketsService {
         : updateTicketStatusDto.status;
 
     const updatedTicket = await this.ticketRepository.save(ticket);
-    return this.toFrontendTicket(updatedTicket);
+
+    const ticketWithUser = await this.ticketRepository.findOne({
+      where: { ticketId: updatedTicket.ticketId },
+      relations: ['user'],
+    });
+
+    if (!ticketWithUser) {
+      throw new NotFoundException(
+        `Ticket with ID ${updatedTicket.ticketId} not found`,
+      );
+    }
+
+    return this.toFrontendTicket(ticketWithUser);
   }
 
   async remove(id: number): Promise<{ message: string }> {

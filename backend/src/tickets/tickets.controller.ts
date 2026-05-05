@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Request,
 } from '@nestjs/common';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
@@ -17,10 +18,20 @@ import { TicketsService } from './tickets.service';
 export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
+  // TEMPORARY FIX FOR TESTING
   @Post()
   create(@Body() createTicketDto: CreateTicketDto): Promise<Ticket> {
-    return this.ticketsService.create(createTicketDto);
+    return this.ticketsService.create(createTicketDto, { user_id: 1 });
   }
+  /***
+  @Post()
+  create(
+    @Body() createTicketDto: CreateTicketDto,
+    @Request() req, any
+  ): Promise<Ticket> {
+    return this.ticketsService.create(createTicketDto, req.user);
+  }
+  **/
 
   @Get()
   findAll(): Promise<Ticket[]> {

@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryColumn } from 'typeorm';
+import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import { User } from '../users/users.entity';
 
 @Entity('tickets')
 export class TicketEntity {
@@ -31,4 +32,11 @@ export class TicketEntity {
     nullable: true,
   })
   ticketStatus!: 'new' | 'open' | 'pending' | 'closed' | 'withdrawn';
+
+  @Column({ name: 'user_id', type: 'integer', nullable: true })
+  userId!: number | null;
+
+  @ManyToOne(() => User, { nullable: true })
+  @JoinColumn({ name: 'user_id' })
+  user!: User | null;
 }
