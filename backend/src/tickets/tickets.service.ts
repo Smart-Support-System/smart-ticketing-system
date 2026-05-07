@@ -158,6 +158,49 @@ export class TicketsService {
     return this.toFrontendTicket(ticketWithUser);
   }
 
+  async updatePriority(
+    id: number,
+    priority: 'low' | 'medium' | 'high',
+    currentUser: CurrentUser,
+  ): Promise<Ticket> {
+    const ticket = await this.ticketRepository.findOne({
+      where: { ticketId: id },
+      relations: ['user'],
+    });
+
+    if (!ticket) {
+      throw new NotFoundException(`Ticket with ID ${id} not found`);
+    }
+
+    const isStaff =
+      currentUser.role === 'agent' || currentUser.role === 'admin';
+
+    if (!isStaff) {
+      throw new NotFoundException(`Ticket with ID ${id} not found`);
+    }
+
+    if (priority !== 'low' && priority !== 'medium' && priority !== 'high') {
+      throw new NotFoundException(`Ticket with ID ${id} not found`);
+    }
+
+    ticket.ticketPriority = priority;
+
+    const updatedTicket = await this.ticketRepository.save(ticket);
+
+    const ticketWithUser = await this.ticketRepository.findOne({
+      where: { ticketId: updatedTicket.ticketId },
+      relations: ['user'],
+    });
+
+    if (!ticketWithUser) {
+      throw new NotFoundException(
+        `Ticket with ID ${updatedTicket.ticketId} not found`,
+      );
+    }
+
+    return this.toFrontendTicket(ticketWithUser);
+  }
+
   async archive(
     id: number,
     currentUser: CurrentUser,

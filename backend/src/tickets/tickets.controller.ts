@@ -52,6 +52,19 @@ export class TicketsController {
     );
   }
 
+  @Patch(':id/priority')
+  updatePriority(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { priority: 'low' | 'medium' | 'high' },
+    @Request() req,
+  ): Promise<Ticket> {
+    return this.ticketsService.updatePriority(
+      id,
+      body.priority,
+      req.session.user,
+    );
+  }
+
   @Delete(':id')
   archive(
     @Param('id', ParseIntPipe) id: number,
