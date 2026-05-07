@@ -37,8 +37,14 @@ export default function Home() {
   const [loading, setLoading] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [statusUpdating, setStatusUpdating] = useState<boolean>(false);
+  const [priorityUpdating, setPriorityUpdating] = useState<boolean>(false);
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
+  const [expandedSections, setExpandedSections] = useState({
+    recent: false,
+    open: false,
+    closed: false,
+  });
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -99,6 +105,11 @@ export default function Home() {
   const selectedTicket =
     tickets.find((ticket) => ticket.id === selectedTicketId) ?? null;
 
+  const isStaff =
+    currentUser?.role === "agent" || currentUser?.role === "admin";
+
+  const isNormalUser = currentUser?.role === "user";
+
   const recentTickets = useMemo(() => {
     return [...tickets]
       .sort(
@@ -126,6 +137,13 @@ export default function Home() {
     setFormData((current) => ({
       ...current,
       [name]: value,
+    }));
+  }
+
+  function toggleSection(section: "recent" | "open" | "closed") {
+    setExpandedSections((current) => ({
+      ...current,
+      [section]: !current[section],
     }));
   }
 
@@ -216,13 +234,55 @@ export default function Home() {
     }
   }
 
+  async function handlePriorityChange(newPriority: TicketPriority) {
+    if (!selectedTicket) {
+      return;
+    }
+
+    try {
+      setPriorityUpdating(true);
+      setErrorMessage("");
+
+      const response = await fetch(
+        `${API_BASE_URL}/tickets/${selectedTicket.id}/priority`,
+        {
+          method: "PATCH",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ priority: newPriority }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update ticket priority.");
+      }
+
+      const updatedTicket: Ticket = await response.json();
+
+      setTickets((currentTickets) =>
+        currentTickets.map((ticket) =>
+          ticket.id === updatedTicket.id ? updatedTicket : ticket
+        )
+      );
+      setSelectedTicketId(updatedTicket.id);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Something went wrong."
+      );
+    } finally {
+      setPriorityUpdating(false);
+    }
+  }
+
   async function handleDeleteTicket() {
     if (!selectedTicket) {
       return;
     }
 
     const confirmed = window.confirm(
-      `Are you sure you want to delete "${selectedTicket.title}"?`
+      `Are you sure you want to archive "${selectedTicket.title}"?`
     );
 
     if (!confirmed) {
@@ -241,7 +301,7 @@ export default function Home() {
       );
 
       if (!response.ok) {
-        throw new Error("Failed to delete ticket.");
+        throw new Error("Failed to archive ticket.");
       }
 
       const remainingTickets = tickets.filter(
@@ -293,7 +353,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-slate-200 p-6">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)_260px]">
-        <aside className="rounded-2xl bg-white p-5 shadow-sm">
+        <aside className="flex h-full flex-col rounded-2xl bg-white p-5 shadow-sm">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900">
               Smart Support
@@ -302,12 +362,88 @@ export default function Home() {
               Ticket dashboard
             </p>
           </div>
+
+          {isNormalUser ? (
+            <button
+              type="button"
+              onClick={() => setShowCreateForm((current) => !current)}
+              className="mb-6 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700"
+            >
+              {showCreateForm ? "Close Ticket Form" : "Create New Ticket"}
+            </button>
+          ) : null}
+
+          <div className="space-y-4">
+            <section>
+              <button
+                type="button"
+                onClick={() => toggleSection("recent")}
+                className="mb-3 flex w-full items-center justify-between rounded-xl bg-slate-100 px-3 py-2 text-left text-sm font-bold uppercase tracking-wide text-gray-500 hover:bg-slate-200"
+              >
+                <span>Recent Tickets ({recentTickets.length})</span>
+                <span>{expandedSections.recent ? "−" : "+"}</span>
+              </button>
+
+              {expandedSections.recent ? (
+                <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                  {recentTickets.length > 0 ? (
+                    recentTickets.map(renderTicketButton)
+                  ) : (
+                    <p className="text-sm text-gray-500">No recent tickets yet.</p>
+                  )}
+                </div>
+              ) : null}
+            </section>
+
+            <section>
+              <button
+                type="button"
+                onClick={() => toggleSection("open")}
+                className="mb-3 flex w-full items-center justify-between rounded-xl bg-slate-100 px-3 py-2 text-left text-sm font-bold uppercase tracking-wide text-gray-500 hover:bg-slate-200"
+              >
+                <span>Open Tickets ({openTickets.length})</span>
+                <span>{expandedSections.open ? "−" : "+"}</span>
+              </button>
+
+              {expandedSections.open ? (
+                <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                  {openTickets.length > 0 ? (
+                    openTickets.map(renderTicketButton)
+                  ) : (
+                    <p className="text-sm text-gray-500">No open tickets.</p>
+                  )}
+                </div>
+              ) : null}
+            </section>
+
+            <section>
+              <button
+                type="button"
+                onClick={() => toggleSection("closed")}
+                className="mb-3 flex w-full items-center justify-between rounded-xl bg-slate-100 px-3 py-2 text-left text-sm font-bold uppercase tracking-wide text-gray-500 hover:bg-slate-200"
+              >
+                <span>Closed Tickets ({closedTickets.length})</span>
+                <span>{expandedSections.closed ? "−" : "+"}</span>
+              </button>
+
+              {expandedSections.closed ? (
+                <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                  {closedTickets.length > 0 ? (
+                    closedTickets.map(renderTicketButton)
+                  ) : (
+                    <p className="text-sm text-gray-500">No closed tickets.</p>
+                  )}
+                </div>
+              ) : null}
+            </section>
+          </div>
+          <div className="mt-auto pt-6">
             {currentUser && (
-              <div className="mt-2 mb-4">
+              <div>
                 <p className="mt-1 text-sm text-gray-600">
                   Logged in as {currentUser.name} ({currentUser.email})
                 </p>
-                
+
                 <button
                   onClick={() => {
                     localStorage.removeItem("currentUser");
@@ -319,59 +455,11 @@ export default function Home() {
                 </button>
               </div>
             )}
-
-          <button
-            type="button"
-            onClick={() => setShowCreateForm((current) => !current)}
-            className="mb-6 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white hover:bg-blue-700"
-          >
-            {showCreateForm ? "Close Ticket Form" : "Create New Ticket"}
-          </button>
-
-          <div className="space-y-6">
-            <section>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
-                Recent Tickets
-              </h2>
-              <div className="space-y-2">
-                {recentTickets.length > 0 ? (
-                  recentTickets.map(renderTicketButton)
-                ) : (
-                  <p className="text-sm text-gray-500">No recent tickets yet.</p>
-                )}
-              </div>
-            </section>
-
-            <section>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
-                Open Tickets
-              </h2>
-              <div className="space-y-2">
-                {openTickets.length > 0 ? (
-                  openTickets.map(renderTicketButton)
-                ) : (
-                  <p className="text-sm text-gray-500">No open tickets.</p>
-                )}
-              </div>
-            </section>
-
-            <section>
-              <h2 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
-                Closed Tickets
-              </h2>
-              <div className="space-y-2">
-                {closedTickets.length > 0 ? (
-                  closedTickets.map(renderTicketButton)
-                ) : (
-                  <p className="text-sm text-gray-500">No closed tickets.</p>
-                )}
-              </div>
-            </section>
           </div>
         </aside>
 
         <section className="rounded-2xl bg-white p-6 shadow-sm">
-          {showCreateForm ? (
+          {showCreateForm && isNormalUser ? (
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
                 Create New Ticket
@@ -422,7 +510,7 @@ export default function Home() {
                   />
                 </div>
 
-                {/* commented out Name and Email for ticket form inputs - automatically submit using login credentials
+                {/* commented out Name and Email for ticket FORM inputs - automatically submit using login credentials
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label
@@ -596,39 +684,61 @@ export default function Home() {
 
               <div>
                 <p className="font-semibold text-gray-500">Priority</p>
-                <p className="mt-1 capitalize text-gray-900">
-                  {selectedTicket.priority}
-                </p>
+
+                {isStaff ? (
+                  <select
+                    id="ticketPriority"
+                    value={selectedTicket.priority}
+                    disabled={priorityUpdating}
+                    onChange={(event) =>
+                      void handlePriorityChange(event.target.value as TicketPriority)
+                    }
+                    className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                ) : (
+                  <p className="mt-1 capitalize text-gray-900">
+                    {selectedTicket.priority}
+                  </p>
+                )}
               </div>
 
               <div>
-                <label
-                  htmlFor="ticketStatus"
-                  className="mb-1 block font-semibold text-gray-500"
-                >
-                  Ticket Status
-                </label>
-                <select
-                  id="ticketStatus"
-                  value={selectedTicket.status}
-                  disabled={statusUpdating}
-                  onChange={(event) =>
-                    void handleStatusChange(event.target.value as TicketStatus)
-                  }
-                  className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 disabled:bg-gray-100"
-                >
-                  <option value="open">Open</option>
-                  <option value="in-progress">In Progress</option>
-                  <option value="closed">Closed</option>
-                </select>
+                <p className="font-semibold text-gray-500">Ticket Status</p>
+
+                {isStaff ? (
+                  <select
+                    id="ticketStatus"
+                    value={selectedTicket.status}
+                    disabled={statusUpdating}
+                    onChange={(event) =>
+                      void handleStatusChange(event.target.value as TicketStatus)
+                    }
+                    className="mt-1 w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500 disabled:bg-gray-100"
+                  >
+                    <option value="open">Open</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                ) : (
+                  <p className="mt-1 capitalize text-gray-900">
+                    {selectedTicket.status}
+                  </p>
+                )}
               </div>
-              <button
-                type="button"
-                onClick={() => void handleDeleteTicket()}
-                className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700"
-              >
-                Delete Ticket
-              </button>
+
+              {isStaff ? (
+                <button
+                  type="button"
+                  onClick={() => void handleDeleteTicket()}
+                  className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700"
+                >
+                  Archive Ticket
+                </button>
+              ) : null}
             </div>
           ) : (
             <p className="mt-5 text-sm text-gray-600">
