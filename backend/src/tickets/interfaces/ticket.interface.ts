@@ -9,4 +9,5 @@ export interface Ticket {
   priority: 'low' | 'medium' | 'high';
   status: TicketStatus;
   createdAt: string;
+  chatStarted: boolean;
 }

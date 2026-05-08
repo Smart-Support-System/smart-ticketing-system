@@ -1,5 +1,13 @@
-import { Column, Entity, JoinColumn, ManyToOne, PrimaryColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  JoinColumn,
+  ManyToOne,
+  OneToMany,
+  PrimaryColumn,
+} from 'typeorm';
 import { User } from '../users/users.entity';
+import { TicketMessage } from './ticket-message.entity';
 
 @Entity('tickets')
 export class TicketEntity {
@@ -42,4 +50,11 @@ export class TicketEntity {
 
   @Column({ name: 'is_archived', type: 'boolean', default: false })
   isArchived!: boolean;
+
+  // Added chat field entity
+  @Column({ name: 'chat_started', type: 'boolean', default: false })
+  chatStarted!: boolean;
+
+  @OneToMany(() => TicketMessage, (message) => message.ticket)
+  messages!: TicketMessage[];
 }

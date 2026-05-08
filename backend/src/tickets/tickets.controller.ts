@@ -16,6 +16,9 @@ import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import type { Ticket } from './interfaces/ticket.interface';
 import { TicketsService } from './tickets.service';
 
+// Added chat functionality import
+import { CreateTicketMessageDto } from './create-ticket-message.dto';
+
 @UseGuards(AuthGuard)
 @Controller('tickets')
 export class TicketsController {
@@ -71,5 +74,25 @@ export class TicketsController {
     @Request() req,
   ): Promise<{ message: string }> {
     return this.ticketsService.deleteArchived(id, req.session.user);
+  }
+
+  // Added ticket functionality
+  @Patch(':id/start-chat')
+  startChat(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.ticketsService.startChat(id, req.session.user);
+  }
+
+  @Get(':id/messages')
+  getMessages(@Param('id', ParseIntPipe) id: number, @Request() req) {
+    return this.ticketsService.getMessages(id, req.session.user);
+  }
+
+  @Post(':id/messages')
+  sendMessage(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: CreateTicketMessageDto,
+    @Request() req,
+  ) {
+    return this.ticketsService.sendMessage(id, dto, req.session.user);
   }
 }

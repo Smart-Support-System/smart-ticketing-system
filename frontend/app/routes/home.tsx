@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Route } from "./+types/home";
 
+// Added ticket chat functionality import
+import TicketChat from "../components/TicketChat";
+
 type TicketStatus = "open" | "in-progress" | "closed";
 type TicketPriority = "low" | "medium" | "high";
 
@@ -13,6 +16,7 @@ type Ticket = {
   priority: TicketPriority;
   status: TicketStatus;
   createdAt: string;
+  chatStarted: boolean;
 };
 
 type AppUser = {
@@ -874,6 +878,7 @@ export default function Home() {
                     </p>
                   </div>
 
+                  {/* REPLACED WITH TICKET CHAT FOR NOW
                   <div className="rounded-2xl bg-slate-100 p-5">
                     <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">
                       Chat / Attachments
@@ -881,6 +886,18 @@ export default function Home() {
                     <p className="text-sm text-gray-600">
                       Not implemented yet in the backend.
                     </p>
+                  </div>
+                  */}
+
+                  <div className="rounded-2xl bg-slate-100 p-5">
+                    <h4 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500">
+                      Ticket Chat
+                    </h4>
+
+                    <TicketChat
+                      ticket={selectedTicket}
+                      currentUser={currentUser}
+                    />
                   </div>
                 </div>
               ) : (
