@@ -31,6 +31,11 @@ export class TicketsController {
     return this.ticketsService.findAll(req.session.user);
   }
 
+  @Get('archived')
+  findArchived(@Request() req): Promise<Ticket[]> {
+    return this.ticketsService.findArchived(req.session.user);
+  }
+
   @Get(':id')
   findOne(
     @Param('id', ParseIntPipe) id: number,
@@ -52,24 +57,19 @@ export class TicketsController {
     );
   }
 
-  @Patch(':id/priority')
-  updatePriority(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() body: { priority: 'low' | 'medium' | 'high' },
-    @Request() req,
-  ): Promise<Ticket> {
-    return this.ticketsService.updatePriority(
-      id,
-      body.priority,
-      req.session.user,
-    );
-  }
-
   @Delete(':id')
   archive(
     @Param('id', ParseIntPipe) id: number,
     @Request() req,
   ): Promise<{ message: string }> {
     return this.ticketsService.archive(id, req.session.user);
+  }
+
+  @Delete(':id/permanent')
+  deleteArchived(
+    @Param('id', ParseIntPipe) id: number,
+    @Request() req,
+  ): Promise<{ message: string }> {
+    return this.ticketsService.deleteArchived(id, req.session.user);
   }
 }

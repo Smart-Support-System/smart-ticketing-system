@@ -95,6 +95,21 @@ export class TicketsService {
     return tickets.map((ticket) => this.toFrontendTicket(ticket));
   }
 
+
+  async findArchived(currentUser: CurrentUser): Promise<Ticket[]> {
+    if (currentUser.role !== 'admin') {
+      throw new NotFoundException('Archived tickets not found');
+    }
+
+    const tickets = await this.ticketRepository.find({
+      where: { isArchived: true },
+      relations: ['user'],
+      order: { createdDate: 'DESC' },
+    });
+
+    return tickets.map((ticket) => this.toFrontendTicket(ticket));
+  }
+
   async findOne(id: number, currentUser: CurrentUser): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
       where: { ticketId: id },
@@ -225,4 +240,25 @@ export class TicketsService {
 
     return { message: `Ticket with ID ${id} archived successfully` };
   }
+  async deleteArchived(
+    id: number,
+    currentUser: CurrentUser,
+  ): Promise<{ message: string }> {
+    if (currentUser.role !== 'admin') {
+      throw new NotFoundException(`Ticket with ID ${id} not found`);
+    }
+
+    const ticket = await this.ticketRepository.findOne({
+      where: { ticketId: id, isArchived: true },
+    });
+
+    if (!ticket) {
+      throw new NotFoundException(`Archived ticket with ID ${id} not found`);
+    }
+
+    await this.ticketRepository.delete({ ticketId: id });
+
+    return { message: `Archived ticket with ID ${id} deleted permanently` };
+  }
+
 }

@@ -4,10 +4,15 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
+import { TicketsModule } from './tickets/tickets.module';
+
+/*** MIGHT DELETE BELOW
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { LocalStrategy } from './auth/local.strategy';
-import { TicketsModule } from './tickets/tickets.module';
+***/
+
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -32,10 +37,10 @@ import { TicketsModule } from './tickets/tickets.module';
       }),
     }),
 
+    // Eventually add AuthModule, UsersModule, and TicketsModule here
     AuthModule,
     TicketsModule,
-
-    // Eventually add AuthModule, UsersModule, and TicketsModule here
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

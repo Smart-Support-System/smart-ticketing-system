@@ -15,6 +15,14 @@ type Ticket = {
   createdAt: string;
 };
 
+type AppUser = {
+  user_id: number;
+  email: string;
+  name: string;
+  is_approved: boolean;
+  role: "user" | "agent" | "admin";
+};
+
 type CreateTicketForm = {
   title: string;
   description: string;
@@ -45,6 +53,10 @@ export default function Home() {
     open: false,
     closed: false,
   });
+  const [activeView, setActiveView] = useState<"dashboard" | "archived" | "users">("dashboard");
+  const [archivedTickets, setArchivedTickets] = useState<Ticket[]>([]);
+  const [users, setUsers] = useState<AppUser[]>([]);
+  const [adminLoading, setAdminLoading] = useState<boolean>(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -108,6 +120,8 @@ export default function Home() {
   const isStaff =
     currentUser?.role === "agent" || currentUser?.role === "admin";
 
+  const isAdmin = currentUser?.role === "admin";
+
   const isNormalUser = currentUser?.role === "user";
 
   const recentTickets = useMemo(() => {
@@ -145,6 +159,165 @@ export default function Home() {
       ...current,
       [section]: !current[section],
     }));
+  }
+
+  async function fetchArchivedTickets() {
+    try {
+      setAdminLoading(true);
+      setErrorMessage("");
+
+      const response = await fetch(`${API_BASE_URL}/tickets/archived`, {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch archived tickets.");
+      }
+
+      const data: Ticket[] = await response.json();
+      setArchivedTickets(data);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Something went wrong."
+      );
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
+  async function fetchUsers() {
+    try {
+      setAdminLoading(true);
+      setErrorMessage("");
+
+      const response = await fetch(`${API_BASE_URL}/users`, {
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch users.");
+      }
+
+      const data: AppUser[] = await response.json();
+      setUsers(data);
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Something went wrong."
+      );
+    } finally {
+      setAdminLoading(false);
+    }
+  }
+
+  async function handleOpenArchivedTickets() {
+    setActiveView("archived");
+    await fetchArchivedTickets();
+  }
+
+  async function handleOpenUserManagement() {
+    setActiveView("users");
+    await fetchUsers();
+  }
+
+  async function handlePermanentDeleteTicket(ticket: Ticket) {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete Ticket (ID: ${ticket.id})?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+
+      const response = await fetch(`${API_BASE_URL}/tickets/${ticket.id}/permanent`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to permanently delete ticket.");
+      }
+
+      setArchivedTickets((current) =>
+        current.filter((archivedTicket) => archivedTicket.id !== ticket.id)
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Something went wrong."
+      );
+    }
+  }
+
+  async function handleRoleChange(user: AppUser, newRole: "user" | "agent" | "admin") {
+    const confirmed = window.confirm(
+      `Are you sure you want '${user.name} (User ID: ${user.user_id})' to be set to '${newRole.toUpperCase()}'?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+
+      const response = await fetch(`${API_BASE_URL}/users/${user.user_id}/role`, {
+        method: "PATCH",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ role: newRole }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update user role.");
+      }
+
+      const updatedUser: AppUser = await response.json();
+
+      setUsers((currentUsers) =>
+        currentUsers.map((currentUser) =>
+          currentUser.user_id === updatedUser.user_id ? updatedUser : currentUser
+        )
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Something went wrong."
+      );
+    }
+  }
+
+  async function handleDeleteUser(user: AppUser) {
+    const confirmed = window.confirm(
+      `Are you sure you want to DELETE '${user.name} (User ID: ${user.user_id})'?`
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setErrorMessage("");
+
+      const response = await fetch(`${API_BASE_URL}/users/${user.user_id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete user.");
+      }
+
+      setUsers((currentUsers) =>
+        currentUsers.filter((currentUser) => currentUser.user_id !== user.user_id)
+      );
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Something went wrong."
+      );
+    }
   }
 
   async function handleCreateTicket(event: React.FormEvent<HTMLFormElement>) {
@@ -437,6 +610,36 @@ export default function Home() {
               ) : null}
             </section>
           </div>
+          {isAdmin ? (
+            <div className="mt-6 space-y-3">
+              <button
+                type="button"
+                onClick={() => void handleOpenArchivedTickets()}
+                className="w-full rounded-xl bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700"
+              >
+                View Archived Tickets
+              </button>
+
+              <button
+                type="button"
+                onClick={() => void handleOpenUserManagement()}
+                className="w-full rounded-xl bg-green-600 px-4 py-3 font-semibold text-white hover:bg-green-700"
+              >
+                Manage Users
+              </button>
+
+              {activeView !== "dashboard" ? (
+                <button
+                  type="button"
+                  onClick={() => setActiveView("dashboard")}
+                  className="w-full rounded-xl border border-gray-300 px-4 py-3 font-semibold text-gray-700 hover:bg-gray-50"
+                >
+                  Back to Dashboard
+                </button>
+              ) : null}
+            </div>
+          ) : null}
+
           <div className="mt-auto pt-6">
             {currentUser && (
               <div>
@@ -459,7 +662,113 @@ export default function Home() {
         </aside>
 
         <section className="rounded-2xl bg-white p-6 shadow-sm">
-          {showCreateForm && isNormalUser ? (
+          {activeView === "archived" ? (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                Archived Tickets
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Permanently delete archived tickets from the system.
+              </p>
+
+              {adminLoading ? (
+                <p className="mt-6 text-gray-600">Loading archived tickets...</p>
+              ) : archivedTickets.length > 0 ? (
+                <div className="mt-6 space-y-3">
+                  {archivedTickets.map((ticket) => (
+                    <div
+                      key={ticket.id}
+                      className="rounded-2xl border border-gray-200 p-4"
+                    >
+                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">
+                            Ticket ID: {ticket.id} — {ticket.title}
+                          </h3>
+                          <p className="text-sm text-gray-600">
+                            Submitted by {ticket.customerName} ({ticket.customerEmail})
+                          </p>
+                          <p className="text-sm text-gray-600">
+                            Priority: {ticket.priority} | Status: {ticket.status}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => void handlePermanentDeleteTicket(ticket)}
+                          className="rounded-xl bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700"
+                        >
+                          Delete Permanently
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-6 text-gray-600">No archived tickets found.</p>
+              )}
+            </div>
+          ) : activeView === "users" ? (
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">
+                User Management
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Grant, resign, or delete users.
+              </p>
+
+              {adminLoading ? (
+                <p className="mt-6 text-gray-600">Loading users...</p>
+              ) : users.length > 0 ? (
+                <div className="mt-6 space-y-3">
+                  {users.map((user) => (
+                    <div
+                      key={user.user_id}
+                      className="rounded-2xl border border-gray-200 p-4"
+                    >
+                      <div className="grid gap-4 md:grid-cols-[1fr_180px_120px] md:items-center">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900">
+                            {user.name} (User ID: {user.user_id})
+                          </h3>
+                          <p className="text-sm text-gray-600">{user.email}</p>
+                          <p className="text-sm text-gray-600">
+                            Current role: {user.role}
+                          </p>
+                        </div>
+
+                        <select
+                          value={user.role}
+                          onChange={(event) =>
+                            void handleRoleChange(
+                              user,
+                              event.target.value as "user" | "agent" | "admin"
+                            )
+                          }
+                          className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
+                        >
+                          <option value="user">Normal User</option>
+                          <option value="agent">Agent</option>
+                          <option value="admin">Admin</option>
+                        </select>
+
+                        <button
+                          type="button"
+                          onClick={() => void handleDeleteUser(user)}
+                          disabled={user.user_id === currentUser?.user_id}
+                          className="rounded-xl bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-red-300"
+                        >
+                          Delete User
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="mt-6 text-gray-600">No users found.</p>
+              )}
+            </div>
+          ) : showCreateForm && isNormalUser ? (
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
                 Create New Ticket
@@ -510,68 +819,6 @@ export default function Home() {
                   />
                 </div>
 
-                {/* commented out Name and Email for ticket FORM inputs - automatically submit using login credentials
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div>
-                    <label
-                      htmlFor="customerName"
-                      className="mb-1 block text-sm font-medium text-gray-700"
-                    >
-                      Name
-                    </label>
-                    <input
-                      id="customerName"
-                      name="customerName"
-                      type="text"
-                      value={formData.customerName}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label
-                      htmlFor="customerEmail"
-                      className="mb-1 block text-sm font-medium text-gray-700"
-                    >
-                      Email
-                    </label>
-                    <input
-                      id="customerEmail"
-                      name="customerEmail"
-                      type="email"
-                      value={formData.customerEmail}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-                */}
-
-                {/* commented out Priority - will add for Agents/Admins
-                <div>
-                  <label
-                    htmlFor="priority"
-                    className="mb-1 block text-sm font-medium text-gray-700"
-                  >
-                    Priority
-                  </label>
-                  <select
-                    id="priority"
-                    name="priority"
-                    value={formData.priority}
-                    onChange={handleInputChange}
-                    className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                  </select>
-                </div>
-                */}
-
                 <button
                   type="submit"
                   disabled={submitting}
@@ -599,11 +846,6 @@ export default function Home() {
                       <h3 className="text-3xl font-bold text-gray-900">
                         {selectedTicket.title}
                       </h3>
-                      {/* removed Priority for UI - will add for Agents/Admins
-                      <span className="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700">
-                        {selectedTicket.priority} priority
-                      </span>
-                      */}
                     </div>
 
                     <p className="mt-2 text-sm text-gray-500">
