@@ -37,7 +37,7 @@ import { UsersModule } from './users/users.module';
       }),
     }),
 
-    // Eventually add AuthModule, UsersModule, and TicketsModule here
+    // Added AuthModule, UsersModule, and TicketsModule here
     AuthModule,
     TicketsModule,
     UsersModule,
