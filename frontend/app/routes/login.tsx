@@ -46,7 +46,7 @@ export default function Login() {
   };
 
   return (
-    <div
+    <div className='bg-slate-200 text-gray-500'
       style={{
         padding: '20px',
         display: 'flex',
@@ -55,7 +55,7 @@ export default function Login() {
         height: '100vh',
       }}
     >
-      <form onSubmit={handleSubmit} style={{ minWidth: '300px' }}>
+      <form onSubmit={handleSubmit} style={{ minWidth: '300px' }} className='w-full max-w-md rounded-2xl bg-white p-8 shadow-sm'>
         <h2 style={{ marginBottom: '10px' }}>Login to Ticket System</h2>
 
         {error && <p style={{ color: 'red' }}>{error}</p>}
@@ -67,12 +67,7 @@ export default function Login() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '8px',
-              marginTop: '4px',
-            }}
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
           />
         </div>
 
@@ -83,12 +78,7 @@ export default function Login() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            style={{
-              display: 'block',
-              width: '100%',
-              padding: '8px',
-              marginTop: '4px',
-            }}
+            className="w-full rounded-xl border border-gray-300 px-4 py-3 outline-none focus:border-blue-500"
           />
         </div>
 
