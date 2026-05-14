@@ -21,6 +21,7 @@ export class AuthService {
       name: name,
       password_hash: Buffer.from(hash, 'utf-8'),
       is_approved: false,
+      role: 'user', // added this line to make new users "normal users" by default
     });
 
     // Save the new user to the database

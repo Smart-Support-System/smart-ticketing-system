@@ -3,19 +3,23 @@ import { Entity, Column, PrimaryGeneratedColumn } from 'typeorm';
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn()
-  user_id: number;
+  user_id!: number;
 
   @Column({ type: 'text', unique: true, nullable: false })
-  email: string;
+  email!: string;
   
   @Column({ type: 'text', nullable: true })
-  name: string;
+  name!: string;
 
   @Column({ type: 'bytea' })
-  password_hash: Buffer;
+  password_hash!: Buffer;
 
   @Column({ type: 'boolean', nullable: true })
-  is_approved: boolean;
+  is_approved!: boolean;
+
+  @Column({
+    type: 'text',
+    default: 'user',
+  })
+  role!: 'user' | 'agent' | 'admin';
 }
-
-
