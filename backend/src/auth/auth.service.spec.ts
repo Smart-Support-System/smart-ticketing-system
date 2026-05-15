@@ -103,6 +103,7 @@ describe('AuthService', () => {
         name,
         password_hash: Buffer.from('hash'),
         is_approved: false,
+        role: 'user',
       };
 
       (bcrypt.hash as jest.Mock).mockResolvedValue('hash');
@@ -127,6 +128,7 @@ describe('AuthService', () => {
         name,
         password_hash: Buffer.from(hashedPassword, 'utf-8'),
         is_approved: false,
+        role: 'user',
       };
 
       (bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
@@ -152,6 +154,7 @@ describe('AuthService', () => {
         name,
         password_hash: Buffer.from(hashedPassword),
         is_approved: false,
+        role: 'user',
       };
 
       (bcrypt.hash as jest.Mock).mockResolvedValue(hashedPassword);
@@ -175,6 +178,7 @@ describe('AuthService', () => {
         name,
         password_hash: Buffer.from('hash'),
         is_approved: false,
+        role: 'user',
       };
 
       (bcrypt.hash as jest.Mock).mockResolvedValue('hash');
@@ -199,6 +203,7 @@ describe('AuthService', () => {
         name: 'Test User',
         password_hash: Buffer.from(hashedPassword, 'utf-8'),
         is_approved: true,
+        role: 'user',
       };
 
       usersRepository.findOne.mockResolvedValue(mockUser);
