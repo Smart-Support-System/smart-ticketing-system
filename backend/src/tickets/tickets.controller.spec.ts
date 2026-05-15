@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { TicketsController } from './tickets.controller';
@@ -6,11 +7,14 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import type { Ticket } from './interfaces/ticket.interface';
 
-/* eslint-disable @typescript-eslint/unbound-method */
-
 describe('TicketsController', () => {
   let controller: TicketsController;
   let service: jest.Mocked<TicketsService>;
+  const mockRequest = {
+    session: {
+      user: { user_id: 1, email: 'test@example.com', role: 'user' },
+    },
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -23,7 +27,8 @@ describe('TicketsController', () => {
             findAll: jest.fn(),
             findOne: jest.fn(),
             updateStatus: jest.fn(),
-            remove: jest.fn(),
+            archive: jest.fn(),
+            deleteArchived: jest.fn(),
           },
         },
       ],
@@ -56,9 +61,12 @@ describe('TicketsController', () => {
 
       service.create.mockReturnValue(mockTicket);
 
-      const result = controller.create(createTicketDto);
+      const result = controller.create(createTicketDto, mockRequest);
 
-      expect(service.create).toHaveBeenCalledWith(createTicketDto);
+      expect(service.create).toHaveBeenCalledWith(
+        createTicketDto,
+        mockRequest.session.user,
+      );
       expect(service.create).toHaveBeenCalledTimes(1);
       expect(result).toEqual(mockTicket);
     });
@@ -84,7 +92,7 @@ describe('TicketsController', () => {
 
       service.create.mockReturnValue(mockTicket);
 
-      const result = controller.create(createTicketDto);
+      const result = controller.create(createTicketDto, mockRequest);
 
       expect(result).toEqual(mockTicket);
       expect(result.id).toBe(5);
@@ -104,7 +112,7 @@ describe('TicketsController', () => {
         throw error;
       });
 
-      expect(() => controller.create(createTicketDto)).toThrow(
+      expect(() => controller.create(createTicketDto, mockRequest)).toThrow(
         'Database error',
       );
     });
@@ -114,7 +122,7 @@ describe('TicketsController', () => {
     it('should call service.findAll', () => {
       service.findAll.mockReturnValue([]);
 
-      controller.findAll();
+      void controller.findAll(mockRequest);
 
       expect(service.findAll).toHaveBeenCalled();
       expect(service.findAll).toHaveBeenCalledTimes(1);
@@ -123,7 +131,7 @@ describe('TicketsController', () => {
     it('should return empty array when no tickets exist', () => {
       service.findAll.mockReturnValue([]);
 
-      const result = controller.findAll();
+      const result = controller.findAll(mockRequest);
 
       expect(result).toEqual([]);
       expect(Array.isArray(result)).toBe(true);
@@ -155,7 +163,7 @@ describe('TicketsController', () => {
 
       service.findAll.mockReturnValue(mockTickets);
 
-      const result = controller.findAll();
+      const result = controller.findAll(mockRequest);
 
       expect(result).toEqual(mockTickets);
       expect(result).toHaveLength(2);
@@ -177,9 +185,12 @@ describe('TicketsController', () => {
 
       service.findOne.mockReturnValue(mockTicket);
 
-      controller.findOne(123);
+      void controller.findOne(123, mockRequest);
 
-      expect(service.findOne).toHaveBeenCalledWith(123);
+      expect(service.findOne).toHaveBeenCalledWith(
+        123,
+        mockRequest.session.user,
+      );
       expect(service.findOne).toHaveBeenCalledTimes(1);
     });
 
@@ -197,7 +208,7 @@ describe('TicketsController', () => {
 
       service.findOne.mockReturnValue(mockTicket);
 
-      const result = controller.findOne(42);
+      const result = controller.findOne(42, mockRequest);
 
       expect(result).toEqual(mockTicket);
       expect(result.id).toBe(42);
@@ -209,7 +220,9 @@ describe('TicketsController', () => {
         throw new NotFoundException('Ticket not found');
       });
 
-      expect(() => controller.findOne(999)).toThrow(NotFoundException);
+      expect(() => controller.findOne(999, mockRequest)).toThrow(
+        NotFoundException,
+      );
     });
 
     it('should handle different ticket IDs correctly', () => {
@@ -237,8 +250,8 @@ describe('TicketsController', () => {
 
       service.findOne.mockReturnValueOnce(ticket1).mockReturnValueOnce(ticket2);
 
-      const result1 = controller.findOne(1);
-      const result2 = controller.findOne(999);
+      const result1 = controller.findOne(1, mockRequest);
+      const result2 = controller.findOne(999, mockRequest);
 
       expect(result1.id).toBe(1);
       expect(result2.id).toBe(999);
@@ -262,9 +275,13 @@ describe('TicketsController', () => {
 
       service.updateStatus.mockReturnValue(mockTicket);
 
-      controller.updateStatus(10, updateDto);
+      void controller.updateStatus(10, updateDto, mockRequest);
 
-      expect(service.updateStatus).toHaveBeenCalledWith(10, updateDto);
+      expect(service.updateStatus).toHaveBeenCalledWith(
+        10,
+        updateDto,
+        mockRequest.session.user,
+      );
       expect(service.updateStatus).toHaveBeenCalledTimes(1);
     });
 
@@ -283,7 +300,7 @@ describe('TicketsController', () => {
 
       service.updateStatus.mockReturnValue(mockTicket);
 
-      const result = controller.updateStatus(5, updateDto);
+      const result = controller.updateStatus(5, updateDto, mockRequest);
 
       expect(result).toEqual(mockTicket);
       expect(result.status).toBe('in-progress');
@@ -297,9 +314,9 @@ describe('TicketsController', () => {
         throw new NotFoundException('Ticket not found');
       });
 
-      expect(() => controller.updateStatus(999, updateDto)).toThrow(
-        NotFoundException,
-      );
+      expect(() =>
+        controller.updateStatus(999, updateDto, mockRequest),
+      ).toThrow(NotFoundException);
     });
 
     it('should support updating to all valid status values', () => {
@@ -324,24 +341,28 @@ describe('TicketsController', () => {
 
         service.updateStatus.mockReturnValue(mockTicket);
 
-        const result = controller.updateStatus(1, updateDto);
+        const result = controller.updateStatus(1, updateDto, mockRequest);
 
         expect(result.status).toBe(status);
-        expect(service.updateStatus).toHaveBeenCalledWith(1, updateDto);
+        expect(service.updateStatus).toHaveBeenCalledWith(
+          1,
+          updateDto,
+          mockRequest.session.user,
+        );
       }
     });
   });
 
-  describe('remove', () => {
-    it('should call service.remove with correct ID', () => {
-      service.remove.mockReturnValue({
+  describe('archive', () => {
+    it('should call service.archive with correct ID', () => {
+      service.archive.mockReturnValue({
         message: 'Ticket with ID 5 deleted successfully',
       });
 
-      controller.remove(5);
+      void controller.archive(5, mockRequest);
 
-      expect(service.remove).toHaveBeenCalledWith(5);
-      expect(service.remove).toHaveBeenCalledTimes(1);
+      expect(service.archive).toHaveBeenCalledWith(5, mockRequest.session.user);
+      expect(service.archive).toHaveBeenCalledTimes(1);
     });
 
     it('should return deletion message from service', () => {
@@ -349,24 +370,26 @@ describe('TicketsController', () => {
         message: 'Ticket with ID 42 deleted successfully',
       };
 
-      service.remove.mockReturnValue(mockResponse);
+      service.archive.mockReturnValue(mockResponse);
 
-      const result = controller.remove(42);
+      const result = controller.archive(42, mockRequest);
 
       expect(result).toEqual(mockResponse);
       expect(result.message).toContain('deleted successfully');
     });
 
     it('should propagate NotFoundException from service', () => {
-      service.remove.mockImplementation(() => {
+      service.archive.mockImplementation(() => {
         throw new NotFoundException('Ticket not found');
       });
 
-      expect(() => controller.remove(999)).toThrow(NotFoundException);
+      expect(() => controller.archive(999, mockRequest)).toThrow(
+        NotFoundException,
+      );
     });
 
     it('should handle multiple deletion attempts with different IDs', () => {
-      service.remove
+      service.archive
         .mockReturnValueOnce({
           message: 'Ticket with ID 1 deleted successfully',
         })
@@ -374,12 +397,12 @@ describe('TicketsController', () => {
           message: 'Ticket with ID 2 deleted successfully',
         });
 
-      const result1 = controller.remove(1);
-      const result2 = controller.remove(2);
+      const result1 = controller.archive(1, mockRequest);
+      const result2 = controller.archive(2, mockRequest);
 
       expect(result1.message).toContain('ID 1');
       expect(result2.message).toContain('ID 2');
-      expect(service.remove).toHaveBeenCalledTimes(2);
+      expect(service.archive).toHaveBeenCalledTimes(2);
     });
   });
 });

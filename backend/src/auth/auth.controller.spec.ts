@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-function-type */
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
+import { AuthService } from './auth.service';
 import { User } from '../users/users.entity';
 
 interface MockRequest {
@@ -13,13 +14,25 @@ interface MockRequest {
 
 describe('AuthController', () => {
   let controller: AuthController;
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  let service: jest.Mocked<AuthService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
+      providers: [
+        {
+          provide: AuthService,
+          useValue: {
+            register: jest.fn(),
+            validateUser: jest.fn(),
+          },
+        },
+      ],
     }).compile();
 
     controller = module.get<AuthController>(AuthController);
+    service = module.get(AuthService);
   });
 
   describe('login', () => {

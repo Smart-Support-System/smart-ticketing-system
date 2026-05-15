@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument */
 import {
   Body,
   Controller,
@@ -25,7 +26,10 @@ export class TicketsController {
   constructor(private readonly ticketsService: TicketsService) {}
 
   @Post()
-  create(@Body() createTicketDto: CreateTicketDto, @Request() req): Promise<Ticket> {
+  create(
+    @Body() createTicketDto: CreateTicketDto,
+    @Request() req,
+  ): Promise<Ticket> {
     return this.ticketsService.create(createTicketDto, req.session.user);
   }
 
