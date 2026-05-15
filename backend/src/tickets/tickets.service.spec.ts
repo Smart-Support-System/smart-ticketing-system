@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-floating-promises, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return */
+/* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unused-vars */
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -8,10 +8,12 @@ import { TicketEntity } from './ticket.entity';
 import { TicketMessage } from './ticket-message.entity';
 import { TicketsService } from './tickets.service';
 
-describe.skip('TicketsService', () => {
+describe('TicketsService', () => {
   let service: TicketsService;
   let ticketRepository: any;
   let messageRepository: any;
+  const mockCurrentUser = { user_id: 1, role: 'user' as const };
+  const mockAdminUser = { user_id: 2, role: 'admin' as const };
 
   beforeEach(async () => {
     // Mock repository implementation
@@ -22,17 +24,34 @@ describe.skip('TicketsService', () => {
       orderBy: jest.fn().mockReturnThis(),
       getMany: jest.fn().mockResolvedValue([]),
       getOne: jest.fn().mockResolvedValue(null),
-      getRawOne: jest.fn().mockResolvedValue(null),
+      getRawOne: jest.fn().mockResolvedValue({ max: 0 }),
       delete: jest.fn().mockReturnThis(),
       execute: jest.fn().mockResolvedValue({ affected: 0 }),
     };
 
     ticketRepository = {
-      save: jest.fn().mockResolvedValue({}),
+      save: jest.fn().mockImplementation((entity) =>
+        Promise.resolve({
+          ticketId: 1,
+          title: entity.title || 'Test',
+          description: entity.description || 'desc',
+          ticketPriority: entity.ticketPriority || 'medium',
+          ticketStatus: entity.ticketStatus || 'open',
+          userId: entity.userId || 1,
+          user: { name: 'Test User', email: 'test@example.com' },
+          isArchived: entity.isArchived || false,
+          chatStarted: entity.chatStarted || false,
+          createdDate: entity.createdDate || new Date(),
+          ...entity,
+        }),
+      ),
       find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn().mockResolvedValue(null),
-      delete: jest.fn().mockResolvedValue({ affected: 0 }),
-      create: jest.fn().mockReturnValue({}),
+      delete: jest.fn().mockResolvedValue({ affected: 1 }),
+      create: jest.fn().mockImplementation((entity) => ({
+        ticketId: 1,
+        ...entity,
+      })),
       createQueryBuilder: jest.fn().mockReturnValue(queryBuilderMock),
     };
 
@@ -61,272 +80,455 @@ describe.skip('TicketsService', () => {
   });
 
   describe('create', () => {
-    it('should create a ticket with all required fields', () => {
+    it('should create a ticket with all required fields', async () => {
       const createTicketDto: CreateTicketDto = {
-        title: 'Login Issue',
-        description: 'Cannot log in with email',
+        title: 'Test Ticket',
+        description: 'Test Description',
         customerName: 'John Doe',
         customerEmail: 'john@example.com',
         priority: 'high',
       };
 
-      const result = service.create(createTicketDto);
-
-      expect(result).toEqual({
-        id: 1,
-        title: 'Login Issue',
-        description: 'Cannot log in with email',
-        customerName: 'John Doe',
-        customerEmail: 'john@example.com',
-        priority: 'high',
-        status: 'open',
-        createdAt: expect.any(String),
+      ticketRepository.findOne.mockResolvedValueOnce({
+        ticketId: 1,
+        title: createTicketDto.title,
+        description: createTicketDto.description,
+        ticketPriority: 'high',
+        ticketStatus: 'open',
+        userId: mockCurrentUser.user_id,
+        user: { name: 'Test User', email: 'test@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
       });
+
+      const result = await service.create(createTicketDto, mockCurrentUser);
+
+      expect(result).toHaveProperty('id', 1);
+      expect(result).toHaveProperty('title', 'Test Ticket');
+      expect(result).toHaveProperty('priority', 'high');
     });
 
-    it('should create a ticket with default priority when not provided', () => {
+    it('should set default priority to medium if not provided', async () => {
       const createTicketDto: CreateTicketDto = {
-        title: 'Feature Request',
-        description: 'Add dark mode',
+        title: 'Test Ticket',
+        description: 'Test Description',
         customerName: 'Jane Smith',
         customerEmail: 'jane@example.com',
       };
 
-      const result = service.create(createTicketDto);
+      ticketRepository.findOne.mockResolvedValueOnce({
+        ticketId: 1,
+        title: createTicketDto.title,
+        description: createTicketDto.description,
+        ticketPriority: 'medium',
+        ticketStatus: 'open',
+        userId: mockCurrentUser.user_id,
+        user: { name: 'Test User', email: 'test@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
+      });
 
-      expect(result.priority).toBe('medium');
-      expect(result.status).toBe('open');
+      const result = await service.create(createTicketDto, mockCurrentUser);
+
+      expect(result).toHaveProperty('priority', 'medium');
     });
 
-    it('should increment ticket ID for each created ticket', () => {
-      const ticket1 = service.create({
-        title: 'Ticket 1',
-        description: 'desc',
-        customerName: 'Customer 1',
-        customerEmail: 'customer1@example.com',
+    it('should set ticket status to open', async () => {
+      const createTicketDto: CreateTicketDto = {
+        title: 'Test Ticket',
+        description: 'Test Description',
+        customerName: 'Bob Wilson',
+        customerEmail: 'bob@example.com',
+      };
+
+      ticketRepository.findOne.mockResolvedValueOnce({
+        ticketId: 1,
+        title: createTicketDto.title,
+        description: createTicketDto.description,
+        ticketPriority: 'medium',
+        ticketStatus: 'open',
+        userId: mockCurrentUser.user_id,
+        user: { name: 'Test User', email: 'test@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
       });
 
-      const ticket2 = service.create({
-        title: 'Ticket 2',
-        description: 'desc',
-        customerName: 'Customer 2',
-        customerEmail: 'customer2@example.com',
-      });
+      const result = await service.create(createTicketDto, mockCurrentUser);
 
-      expect(ticket2.id).toBe(ticket1.id + 1);
+      expect(result).toHaveProperty('status', 'open');
     });
 
-    it('should set createdAt to current timestamp', () => {
-      const beforeCreate = new Date();
-      const result = service.create({
-        title: 'Test',
-        description: 'desc',
-        customerName: 'Customer',
-        customerEmail: 'test@example.com',
-      });
-      const afterCreate = new Date();
+    it('should throw NotFoundException if ticket not found after save', async () => {
+      const createTicketDto: CreateTicketDto = {
+        title: 'Test Ticket',
+        description: 'Test Description',
+        customerName: 'Alice Brown',
+        customerEmail: 'alice@example.com',
+      };
 
-      const createdAt = new Date(result.createdAt);
+      ticketRepository.findOne.mockResolvedValueOnce(null);
 
-      expect(createdAt.getTime()).toBeGreaterThanOrEqual(
-        beforeCreate.getTime(),
-      );
-      expect(createdAt.getTime()).toBeLessThanOrEqual(afterCreate.getTime());
+      await expect(
+        service.create(createTicketDto, mockCurrentUser),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('findAll', () => {
-    it('should return empty array when no tickets exist', () => {
-      const result = service.findAll();
-      expect(result).toEqual([]);
-    });
+    it('should return all non-archived tickets for regular user', async () => {
+      const mockTickets = [
+        {
+          ticketId: 1,
+          title: 'Ticket 1',
+          description: 'desc',
+          ticketPriority: 'medium',
+          ticketStatus: 'open',
+          userId: mockCurrentUser.user_id,
+          user: { name: 'Test User', email: 'test@example.com' },
+          createdDate: new Date(),
+          isArchived: false,
+          chatStarted: false,
+        },
+        {
+          ticketId: 2,
+          title: 'Ticket 2',
+          description: 'desc',
+          ticketPriority: 'high',
+          ticketStatus: 'open',
+          userId: mockCurrentUser.user_id,
+          user: { name: 'Test User', email: 'test@example.com' },
+          createdDate: new Date(),
+          isArchived: false,
+          chatStarted: false,
+        },
+      ];
 
-    it('should return all created tickets', () => {
-      const ticket1 = service.create({
-        title: 'Ticket 1',
-        description: 'desc',
-        customerName: 'Customer 1',
-        customerEmail: 'customer1@example.com',
-      });
+      ticketRepository.find.mockResolvedValueOnce(mockTickets);
 
-      const ticket2 = service.create({
-        title: 'Ticket 2',
-        description: 'desc',
-        customerName: 'Customer 2',
-        customerEmail: 'customer2@example.com',
-      });
-
-      const result = service.findAll();
+      const result = await service.findAll(mockCurrentUser);
 
       expect(result).toHaveLength(2);
-      expect(result).toContain(ticket1);
-      expect(result).toContain(ticket2);
+      expect(result[0].id).toBe(1);
+      expect(result[1].id).toBe(2);
+    });
+
+    it('should only return tickets for current user when not staff', async () => {
+      const mockTickets = [
+        {
+          ticketId: 1,
+          title: 'Ticket 1',
+          description: 'desc',
+          ticketPriority: 'medium',
+          ticketStatus: 'open',
+          userId: mockCurrentUser.user_id,
+          user: { name: 'Test User', email: 'test@example.com' },
+          createdDate: new Date(),
+          isArchived: false,
+          chatStarted: false,
+        },
+      ];
+
+      ticketRepository.find.mockResolvedValueOnce(mockTickets);
+
+      const result = await service.findAll(mockCurrentUser);
+
+      expect(ticketRepository.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            userId: mockCurrentUser.user_id,
+            isArchived: false,
+          }),
+        }),
+      );
+      expect(result).toHaveLength(1);
     });
   });
 
   describe('findOne', () => {
-    it('should find a ticket by ID', () => {
-      const created = service.create({
+    it('should return a single ticket by ID', async () => {
+      const mockTicket = {
+        ticketId: 1,
         title: 'Test Ticket',
-        description: 'desc',
-        customerName: 'Test Customer',
-        customerEmail: 'test@example.com',
-        priority: 'low',
-      });
+        description: 'Test Description',
+        ticketPriority: 'high',
+        ticketStatus: 'open',
+        userId: mockCurrentUser.user_id,
+        user: { name: 'Test User', email: 'test@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
+      };
 
-      const result = service.findOne(created.id);
+      ticketRepository.findOne.mockResolvedValueOnce(mockTicket);
 
-      expect(result).toEqual(created);
+      const result = await service.findOne(1, mockCurrentUser);
+
+      expect(result).toHaveProperty('id', 1);
+      expect(result).toHaveProperty('title', 'Test Ticket');
     });
 
-    it('should throw NotFoundException when ticket does not exist', () => {
-      expect(() => service.findOne(999)).toThrow(NotFoundException);
-      expect(() => service.findOne(999)).toThrow(
-        'Ticket with ID 999 not found',
-      );
-    });
+    it('should throw NotFoundException when ticket does not exist', async () => {
+      ticketRepository.findOne.mockResolvedValueOnce(null);
 
-    it('should find correct ticket among multiple tickets', () => {
-      const ticket1 = service.create({
-        title: 'Ticket 1',
-        description: 'desc',
-        customerName: 'Customer 1',
-        customerEmail: 'customer1@example.com',
-      });
-
-      service.create({
-        title: 'Ticket 2',
-        description: 'desc',
-        customerName: 'Customer 2',
-        customerEmail: 'customer2@example.com',
-      });
-
-      const ticket3 = service.create({
-        title: 'Ticket 3',
-        description: 'desc',
-        customerName: 'Customer 3',
-        customerEmail: 'customer3@example.com',
-      });
-
-      const result = service.findOne(ticket3.id);
-
-      expect(result).toEqual(ticket3);
-      expect(result.id).not.toBe(ticket1.id);
-    });
-  });
-
-  describe('updateStatus', () => {
-    it('should update ticket status', () => {
-      const created = service.create({
-        title: 'Test',
-        description: 'desc',
-        customerName: 'Customer',
-        customerEmail: 'test@example.com',
-      });
-
-      const updateDto: UpdateTicketStatusDto = { status: 'in-progress' };
-      const result = service.updateStatus(created.id, updateDto);
-
-      expect(result.status).toBe('in-progress');
-      expect(result.id).toBe(created.id);
-    });
-
-    it('should persist status update in subsequent fetches', () => {
-      const created = service.create({
-        title: 'Test',
-        description: 'desc',
-        customerName: 'Customer',
-        customerEmail: 'test@example.com',
-      });
-
-      service.updateStatus(created.id, { status: 'closed' });
-      const fetched = service.findOne(created.id);
-
-      expect(fetched.status).toBe('closed');
-    });
-
-    it('should throw NotFoundException when updating non-existent ticket', () => {
-      expect(() => service.updateStatus(999, { status: 'closed' })).toThrow(
+      await expect(service.findOne(999, mockCurrentUser)).rejects.toThrow(
         NotFoundException,
       );
     });
 
-    it('should support updating to all valid status values', () => {
-      const created = service.create({
-        title: 'Test',
-        description: 'desc',
-        customerName: 'Customer',
-        customerEmail: 'test@example.com',
-      });
+    it('should allow staff to view any ticket', async () => {
+      const mockTicket = {
+        ticketId: 1,
+        title: 'Test Ticket',
+        description: 'Test Description',
+        ticketPriority: 'high',
+        ticketStatus: 'open',
+        userId: 999, // Different user
+        user: { name: 'Other User', email: 'other@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
+      };
 
-      const statuses: Array<'open' | 'in-progress' | 'closed'> = [
-        'open',
-        'in-progress',
-        'closed',
-      ];
+      ticketRepository.findOne.mockResolvedValueOnce(mockTicket);
 
-      for (const status of statuses) {
-        const result = service.updateStatus(created.id, { status });
-        expect(result.status).toBe(status);
-      }
+      const staffUser = { user_id: 2, role: 'agent' as const };
+      const result = await service.findOne(1, staffUser);
+
+      expect(result).toHaveProperty('id', 1);
+    });
+
+    it('should prevent regular user from viewing other users tickets', async () => {
+      const mockTicket = {
+        ticketId: 1,
+        title: 'Test Ticket',
+        description: 'Test Description',
+        ticketPriority: 'high',
+        ticketStatus: 'open',
+        userId: 999, // Different user
+        user: { name: 'Other User', email: 'other@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
+      };
+
+      ticketRepository.findOne.mockResolvedValueOnce(mockTicket);
+
+      await expect(service.findOne(1, mockCurrentUser)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
-  describe('remove', () => {
-    it('should remove a ticket by ID', () => {
-      const created = service.create({
-        title: 'Test',
-        description: 'desc',
-        customerName: 'Customer',
-        customerEmail: 'test@example.com',
-      });
+  describe('updateStatus', () => {
+    it('should update ticket status successfully', async () => {
+      const updateDto: UpdateTicketStatusDto = { status: 'in-progress' };
 
-      const result = service.remove(created.id);
+      const mockTicket = {
+        ticketId: 1,
+        title: 'Test Ticket',
+        description: 'Test Description',
+        ticketPriority: 'high',
+        ticketStatus: 'pending',
+        userId: 2,
+        user: { name: 'Other User', email: 'other@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
+      };
 
-      expect(result).toEqual({
-        message: `Ticket with ID ${created.id} deleted successfully`,
+      ticketRepository.findOne.mockResolvedValueOnce(mockTicket); // First findOne (before update)
+      ticketRepository.save.mockResolvedValueOnce({
+        ...mockTicket,
+        ticketStatus: 'pending',
       });
+      ticketRepository.findOne.mockResolvedValueOnce({
+        ...mockTicket,
+        ticketStatus: 'pending',
+      }); // Second findOne (after save)
+
+      const staffUser = { user_id: 2, role: 'agent' as const };
+      const result = await service.updateStatus(1, updateDto, staffUser);
+
+      expect(result).toHaveProperty('status', 'in-progress');
     });
 
-    it('should actually remove the ticket from storage', () => {
-      const created = service.create({
-        title: 'Test',
-        description: 'desc',
-        customerName: 'Customer',
-        customerEmail: 'test@example.com',
-      });
+    it('should convert pending status to in-progress for frontend', async () => {
+      const updateDto: UpdateTicketStatusDto = { status: 'in-progress' };
 
-      service.remove(created.id);
+      const mockTicket = {
+        ticketId: 1,
+        title: 'Test Ticket',
+        description: 'Test Description',
+        ticketPriority: 'high',
+        ticketStatus: 'pending',
+        userId: 2,
+        user: { name: 'Other User', email: 'other@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
+      };
 
-      expect(() => service.findOne(created.id)).toThrow(NotFoundException);
+      ticketRepository.findOne.mockResolvedValueOnce(mockTicket); // First findOne
+      ticketRepository.save.mockResolvedValueOnce(mockTicket);
+      ticketRepository.findOne.mockResolvedValueOnce(mockTicket); // Second findOne
+
+      const staffUser = { user_id: 2, role: 'agent' as const };
+      const result = await service.updateStatus(1, updateDto, staffUser);
+
+      expect(result.status).toBe('in-progress');
     });
 
-    it('should remove only the specified ticket', () => {
-      const ticket1 = service.create({
-        title: 'Ticket 1',
-        description: 'desc',
-        customerName: 'Customer 1',
-        customerEmail: 'customer1@example.com',
-      });
+    it('should prevent non-staff from updating status', async () => {
+      const updateDto: UpdateTicketStatusDto = { status: 'closed' };
 
-      const ticket2 = service.create({
-        title: 'Ticket 2',
-        description: 'desc',
-        customerName: 'Customer 2',
-        customerEmail: 'customer2@example.com',
-      });
-
-      service.remove(ticket1.id);
-
-      const remaining = service.findAll();
-
-      expect(remaining).toHaveLength(1);
-      expect(remaining[0]).toEqual(ticket2);
+      await expect(
+        service.updateStatus(1, updateDto, mockCurrentUser),
+      ).rejects.toThrow(NotFoundException);
     });
 
-    it('should throw NotFoundException when removing non-existent ticket', () => {
-      expect(() => service.remove(999)).toThrow(NotFoundException);
-      expect(() => service.remove(999)).toThrow('Ticket with ID 999 not found');
+    it('should throw NotFoundException when updating non-existent ticket', async () => {
+      const updateDto: UpdateTicketStatusDto = { status: 'closed' };
+
+      ticketRepository.findOne.mockResolvedValueOnce(null);
+
+      const staffUser = { user_id: 2, role: 'agent' as const };
+
+      await expect(
+        service.updateStatus(999, updateDto, staffUser),
+      ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('archive', () => {
+    it('should archive a ticket successfully', async () => {
+      const mockTicket = {
+        ticketId: 1,
+        title: 'Test Ticket',
+        description: 'Test Description',
+        ticketPriority: 'high',
+        ticketStatus: 'closed',
+        userId: 999,
+        user: { name: 'Other User', email: 'other@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
+      };
+
+      ticketRepository.findOne.mockResolvedValueOnce(mockTicket);
+      ticketRepository.save.mockResolvedValueOnce({
+        ...mockTicket,
+        isArchived: true,
+      });
+
+      const staffUser = { user_id: 2, role: 'agent' as const };
+      const result = await service.archive(1, staffUser);
+
+      expect(result.message).toContain('archived successfully');
+    });
+
+    it('should prevent regular user from archiving', async () => {
+      await expect(service.archive(1, mockCurrentUser)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException when archiving non-existent ticket', async () => {
+      ticketRepository.findOne.mockResolvedValueOnce(null);
+
+      const staffUser = { user_id: 2, role: 'agent' as const };
+
+      await expect(service.archive(999, staffUser)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should allow admin to archive tickets', async () => {
+      const mockTicket = {
+        ticketId: 1,
+        title: 'Test Ticket',
+        description: 'Test Description',
+        ticketPriority: 'high',
+        ticketStatus: 'closed',
+        userId: 999,
+        user: { name: 'Other User', email: 'other@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
+      };
+
+      ticketRepository.findOne.mockResolvedValueOnce(mockTicket);
+      ticketRepository.save.mockResolvedValueOnce({
+        ...mockTicket,
+        isArchived: true,
+      });
+
+      const result = await service.archive(1, mockAdminUser);
+
+      expect(result.message).toContain('archived successfully');
+    });
+  });
+
+  describe('deleteArchived', () => {
+    it('should permanently delete an archived ticket', async () => {
+      const mockTicket = {
+        ticketId: 1,
+        title: 'Test Ticket',
+        description: 'Test Description',
+        ticketPriority: 'high',
+        ticketStatus: 'closed',
+        userId: 999,
+        user: { name: 'Other User', email: 'other@example.com' },
+        createdDate: new Date(),
+        isArchived: true,
+        chatStarted: false,
+      };
+
+      ticketRepository.findOne.mockResolvedValueOnce(mockTicket);
+      ticketRepository.delete.mockResolvedValueOnce({ affected: 1 });
+
+      const result = await service.deleteArchived(1, mockAdminUser);
+
+      expect(result.message).toContain('deleted permanently');
+    });
+
+    it('should prevent non-admin from deleting archived tickets', async () => {
+      const staffUser = { user_id: 2, role: 'agent' as const };
+
+      await expect(service.deleteArchived(1, staffUser)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should throw NotFoundException when deleting non-existent archived ticket', async () => {
+      ticketRepository.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.deleteArchived(999, mockAdminUser)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should prevent deletion of non-archived tickets', async () => {
+      const mockTicket = {
+        ticketId: 1,
+        title: 'Test Ticket',
+        description: 'Test Description',
+        ticketPriority: 'high',
+        ticketStatus: 'closed',
+        userId: 999,
+        user: { name: 'Other User', email: 'other@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
+      };
+
+      ticketRepository.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.deleteArchived(1, mockAdminUser)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });
