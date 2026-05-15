@@ -6,6 +6,14 @@ import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
 import { TicketsModule } from './tickets/tickets.module';
 
+/*** MIGHT DELETE BELOW
+import { AuthController } from './auth/auth.controller';
+import { AuthService } from './auth/auth.service';
+import { LocalStrategy } from './auth/local.strategy';
+***/
+
+import { UsersModule } from './users/users.module';
+
 @Module({
   imports: [
     // Initialize ConfigModule globally to access .env everywhere
@@ -25,14 +33,14 @@ import { TicketsModule } from './tickets/tickets.module';
         password: config.get<string>('DB_PASSWORD', 'password'),
         database: config.get<string>('DB_NAME', 'smart_support_db'),
         autoLoadEntities: true,
-        synchronize: true, // Note: Set to false in production to avoid data loss
+        synchronize: false, // Note: Set to false in production to avoid data loss
       }),
     }),
 
+    // Added AuthModule, UsersModule, and TicketsModule here
     AuthModule,
     TicketsModule,
-
-    // Eventually add AuthModule, UsersModule, and TicketsModule here
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
