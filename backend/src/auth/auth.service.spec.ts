@@ -10,7 +10,7 @@ jest.mock('bcrypt');
 
 /* eslint-disable @typescript-eslint/unbound-method */
 
-describe.skip('AuthService', () => {
+describe('AuthService', () => {
   let service: AuthService;
   let usersRepository: jest.Mocked<Repository<User>>;
 
@@ -63,6 +63,7 @@ describe.skip('AuthService', () => {
         name,
         password_hash: Buffer.from(hashedPassword, 'utf-8'),
         is_approved: false,
+        role: 'user',
       });
       expect(usersRepository.save).toHaveBeenCalledWith(mockUser);
       expect(result).toEqual(mockUser);
