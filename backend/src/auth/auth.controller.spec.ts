@@ -1,6 +1,15 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-function-type */
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { User } from '../users/users.entity';
+
+interface MockRequest {
+  user?: User;
+  session: {
+    user?: User;
+    destroy: jest.Mock;
+  };
+}
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -24,24 +33,24 @@ describe('AuthController', () => {
       };
 
       const mockSession = {};
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         user: mockUser,
-        session: mockSession,
+        session: mockSession as any,
       };
 
-      const result = controller.login(mockRequest);
+      const result = controller.login(mockRequest as any);
 
       expect(mockRequest.session.user).toEqual(mockUser);
       expect(result).toEqual({ message: 'Login successful' });
     });
 
     it('should return correct response shape', () => {
-      const mockRequest = {
-        user: { user_id: 1 },
-        session: {},
+      const mockRequest: MockRequest = {
+        user: { user_id: 1 } as User,
+        session: {} as any,
       };
 
-      const result = controller.login(mockRequest);
+      const result = controller.login(mockRequest as any);
 
       expect(result).toHaveProperty('message');
       expect(typeof result.message).toBe('string');
@@ -52,18 +61,18 @@ describe('AuthController', () => {
       const mockUser = {
         user_id: 123,
         email: 'test@example.com',
-      };
+      } as User;
 
       const mockSession = {};
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         user: mockUser,
-        session: mockSession,
+        session: mockSession as any,
       };
 
-      controller.login(mockRequest);
+      controller.login(mockRequest as any);
 
       expect(mockSession).toHaveProperty('user');
-      expect(mockSession['user']).toEqual(mockUser);
+      expect((mockSession as any).user).toEqual(mockUser);
     });
 
     it('should handle user with full profile', () => {
@@ -75,28 +84,28 @@ describe('AuthController', () => {
         is_approved: true,
       };
 
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         user: mockUser,
-        session: {},
+        session: {} as any,
       };
 
-      const result = controller.login(mockRequest);
+      const result = controller.login(mockRequest as any);
 
       expect(mockRequest.session.user).toEqual(mockUser);
       expect(result.message).toBe('Login successful');
     });
 
     it('should overwrite previous session user on re-login', () => {
-      const user1 = { user_id: 1, email: 'user1@example.com' };
-      const user2 = { user_id: 2, email: 'user2@example.com' };
+      const user1 = { user_id: 1, email: 'user1@example.com' } as User;
+      const user2 = { user_id: 2, email: 'user2@example.com' } as User;
 
       const mockSession = { user: user1 };
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         user: user2,
-        session: mockSession,
+        session: mockSession as any,
       };
 
-      controller.login(mockRequest);
+      controller.login(mockRequest as any);
 
       expect(mockSession.user).toEqual(user2);
       expect(mockSession.user.user_id).toBe(2);
@@ -106,26 +115,26 @@ describe('AuthController', () => {
   describe('logout', () => {
     it('should destroy session and return success message', () => {
       const destroyMock = jest.fn();
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         session: {
           destroy: destroyMock,
         },
       };
 
-      const result = controller.logout(mockRequest);
+      const result = controller.logout(mockRequest as any);
 
       expect(destroyMock).toHaveBeenCalled();
       expect(result).toEqual({ message: 'Logout successful' });
     });
 
     it('should return correct response shape', () => {
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         session: {
           destroy: jest.fn(),
         },
       };
 
-      const result = controller.logout(mockRequest);
+      const result = controller.logout(mockRequest as any);
 
       expect(result).toHaveProperty('message');
       expect(typeof result.message).toBe('string');
@@ -134,42 +143,42 @@ describe('AuthController', () => {
 
     it('should call session.destroy exactly once', () => {
       const destroyMock = jest.fn();
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         session: {
           destroy: destroyMock,
         },
       };
 
-      controller.logout(mockRequest);
+      controller.logout(mockRequest as any);
 
       expect(destroyMock).toHaveBeenCalledTimes(1);
     });
 
     it('should call destroy without arguments', () => {
       const destroyMock = jest.fn();
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         session: {
           destroy: destroyMock,
         },
       };
 
-      controller.logout(mockRequest);
+      controller.logout(mockRequest as any);
 
       expect(destroyMock).toHaveBeenCalledWith();
     });
 
     it('should handle session destroy callbacks', () => {
       const destroyMock = jest.fn((callback) => {
-        if (callback) callback(null);
+        if (callback) (callback as Function)();
       });
 
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         session: {
           destroy: destroyMock,
         },
       };
 
-      const result = controller.logout(mockRequest);
+      const result = controller.logout(mockRequest as any);
 
       expect(destroyMock).toHaveBeenCalled();
       expect(result.message).toBe('Logout successful');
@@ -177,14 +186,14 @@ describe('AuthController', () => {
 
     it('should handle multiple logouts in sequence', () => {
       const destroyMock = jest.fn();
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         session: {
           destroy: destroyMock,
         },
       };
 
-      controller.logout(mockRequest);
-      controller.logout(mockRequest);
+      controller.logout(mockRequest as any);
+      controller.logout(mockRequest as any);
 
       expect(destroyMock).toHaveBeenCalledTimes(2);
     });
@@ -195,13 +204,15 @@ describe('AuthController', () => {
         throw error;
       });
 
-      const mockRequest = {
+      const mockRequest: MockRequest = {
         session: {
           destroy: destroyMock,
         },
       };
 
-      expect(() => controller.logout(mockRequest)).toThrow('Session destroy failed');
+      expect(() => controller.logout(mockRequest as any)).toThrow(
+        'Session destroy failed',
+      );
     });
   });
 });

@@ -38,7 +38,10 @@ export class TicketsService {
     return ticket;
   }
 
-  updateStatus(id: number, updateTicketStatusDto: UpdateTicketStatusDto): Ticket {
+  updateStatus(
+    id: number,
+    updateTicketStatusDto: UpdateTicketStatusDto,
+  ): Ticket {
     const ticket = this.findOne(id);
     ticket.status = updateTicketStatusDto.status;
     return ticket;

@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { NotFoundException } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
-import type { Ticket } from './interfaces/ticket.interface';
 import { TicketsService } from './tickets.service';
 
 describe('TicketsService', () => {
@@ -84,7 +84,9 @@ describe('TicketsService', () => {
 
       const createdAt = new Date(result.createdAt);
 
-      expect(createdAt.getTime()).toBeGreaterThanOrEqual(beforeCreate.getTime());
+      expect(createdAt.getTime()).toBeGreaterThanOrEqual(
+        beforeCreate.getTime(),
+      );
       expect(createdAt.getTime()).toBeLessThanOrEqual(afterCreate.getTime());
     });
   });
@@ -200,9 +202,9 @@ describe('TicketsService', () => {
     });
 
     it('should throw NotFoundException when updating non-existent ticket', () => {
-      expect(() =>
-        service.updateStatus(999, { status: 'closed' }),
-      ).toThrow(NotFoundException);
+      expect(() => service.updateStatus(999, { status: 'closed' })).toThrow(
+        NotFoundException,
+      );
     });
 
     it('should support updating to all valid status values', () => {
@@ -280,9 +282,7 @@ describe('TicketsService', () => {
 
     it('should throw NotFoundException when removing non-existent ticket', () => {
       expect(() => service.remove(999)).toThrow(NotFoundException);
-      expect(() => service.remove(999)).toThrow(
-        'Ticket with ID 999 not found',
-      );
+      expect(() => service.remove(999)).toThrow('Ticket with ID 999 not found');
     });
   });
 });

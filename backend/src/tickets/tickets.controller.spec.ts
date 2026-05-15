@@ -6,6 +6,8 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import type { Ticket } from './interfaces/ticket.interface';
 
+/* eslint-disable @typescript-eslint/unbound-method */
+
 describe('TicketsController', () => {
   let controller: TicketsController;
   let service: jest.Mocked<TicketsService>;
@@ -28,7 +30,7 @@ describe('TicketsController', () => {
     }).compile();
 
     controller = module.get<TicketsController>(TicketsController);
-    service = module.get(TicketsService) as jest.Mocked<TicketsService>;
+    service = module.get(TicketsService);
   });
 
   describe('create', () => {
@@ -102,7 +104,9 @@ describe('TicketsController', () => {
         throw error;
       });
 
-      expect(() => controller.create(createTicketDto)).toThrow('Database error');
+      expect(() => controller.create(createTicketDto)).toThrow(
+        'Database error',
+      );
     });
   });
 
@@ -293,7 +297,9 @@ describe('TicketsController', () => {
         throw new NotFoundException('Ticket not found');
       });
 
-      expect(() => controller.updateStatus(999, updateDto)).toThrow(NotFoundException);
+      expect(() => controller.updateStatus(999, updateDto)).toThrow(
+        NotFoundException,
+      );
     });
 
     it('should support updating to all valid status values', () => {
@@ -328,7 +334,9 @@ describe('TicketsController', () => {
 
   describe('remove', () => {
     it('should call service.remove with correct ID', () => {
-      service.remove.mockReturnValue({ message: 'Ticket with ID 5 deleted successfully' });
+      service.remove.mockReturnValue({
+        message: 'Ticket with ID 5 deleted successfully',
+      });
 
       controller.remove(5);
 
@@ -337,7 +345,9 @@ describe('TicketsController', () => {
     });
 
     it('should return deletion message from service', () => {
-      const mockResponse = { message: 'Ticket with ID 42 deleted successfully' };
+      const mockResponse = {
+        message: 'Ticket with ID 42 deleted successfully',
+      };
 
       service.remove.mockReturnValue(mockResponse);
 
@@ -357,8 +367,12 @@ describe('TicketsController', () => {
 
     it('should handle multiple deletion attempts with different IDs', () => {
       service.remove
-        .mockReturnValueOnce({ message: 'Ticket with ID 1 deleted successfully' })
-        .mockReturnValueOnce({ message: 'Ticket with ID 2 deleted successfully' });
+        .mockReturnValueOnce({
+          message: 'Ticket with ID 1 deleted successfully',
+        })
+        .mockReturnValueOnce({
+          message: 'Ticket with ID 2 deleted successfully',
+        });
 
       const result1 = controller.remove(1);
       const result2 = controller.remove(2);

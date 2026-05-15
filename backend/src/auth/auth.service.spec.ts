@@ -8,6 +8,8 @@ import { User } from '../users/users.entity';
 // Mock bcrypt
 jest.mock('bcrypt');
 
+/* eslint-disable @typescript-eslint/unbound-method */
+
 describe('AuthService', () => {
   let service: AuthService;
   let usersRepository: jest.Mocked<Repository<User>>;
@@ -206,10 +208,7 @@ describe('AuthService', () => {
       expect(usersRepository.findOne).toHaveBeenCalledWith({
         where: { email },
       });
-      expect(bcrypt.compare).toHaveBeenCalledWith(
-        password,
-        hashedPassword,
-      );
+      expect(bcrypt.compare).toHaveBeenCalledWith(password, hashedPassword);
       expect(result).toEqual(mockUser);
     });
 
@@ -271,10 +270,7 @@ describe('AuthService', () => {
 
       await service.validateUser(email, password);
 
-      expect(bcrypt.compare).toHaveBeenCalledWith(
-        password,
-        hashedPassword,
-      );
+      expect(bcrypt.compare).toHaveBeenCalledWith(password, hashedPassword);
     });
 
     it('should handle multiple validation attempts independently', async () => {
