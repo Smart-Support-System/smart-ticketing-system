@@ -28,7 +28,15 @@ export class AuthController {
   login(@Request() req: AuthRequest): any {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     req.session.user = req.user; // Save user session
-    return { message: 'Login successful' };
+    return {
+      message: 'Login successful',
+      user: {
+        user_id: req.user.user_id,
+        email: req.user.email,
+        name: req.user.name,
+        role: req.user.role,
+      },
+    };
   }
 
   @Post('logout')

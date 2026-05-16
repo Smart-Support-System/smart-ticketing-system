@@ -33,7 +33,7 @@ import { UsersModule } from './users/users.module';
         password: config.get<string>('DB_PASSWORD', 'password'),
         database: config.get<string>('DB_NAME', 'smart_support_db'),
         autoLoadEntities: true,
-        synchronize: false, // Note: Set to false in production to avoid data loss
+        synchronize: true, // Note: Set to false in production to avoid data loss
       }),
     }),
 
