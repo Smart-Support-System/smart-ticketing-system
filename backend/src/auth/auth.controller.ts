@@ -2,14 +2,6 @@ import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 
-interface AuthRequest {
-  user?: any;
-  session: {
-    user?: any;
-    destroy: (callback?: (err?: Error) => void) => void;
-  };
-}
-
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -25,14 +17,19 @@ export class AuthController {
 
   @UseGuards(AuthGuard('local'))
   @Post('login')
-  login(@Request() req: AuthRequest): any {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    req.session.user = req.user; // Save user session
-    return { message: 'Login successful' };
+  login(@Request() req): any {
+    req.session.user = req.user;
+    
+    const { password_hash, ...safeUser } = req.user;
+
+    return {
+      message: 'Login successful',
+      user: safeUser,
+    };
   }
 
   @Post('logout')
-  logout(@Request() req: AuthRequest): any {
+  logout(@Request() req): any {
     req.session.destroy();
     return { message: 'Logout successful' };
   }
