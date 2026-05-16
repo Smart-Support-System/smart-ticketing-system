@@ -32,6 +32,7 @@ export class UsersService {
   }
 
   private toSafeUser(user: User) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password_hash, ...safeUser } = user;
     return safeUser;
   }
