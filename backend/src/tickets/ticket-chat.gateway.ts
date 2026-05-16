@@ -62,21 +62,21 @@ export class TicketChatGateway {
   async handleStartTicketChat(
     @MessageBody()
     data: {
-      ticketId: number;
-      currentUser: {
+        ticketId: number;
+        currentUser: {
         user_id: number;
         role: 'user' | 'agent' | 'admin';
-      };
+        };
     },
   ) {
     const updatedTicket = await this.ticketsService.startChat(
-      data.ticketId,
-      data.currentUser,
+        data.ticketId,
+        data.currentUser,
     );
 
     this.server
-      .to(`ticket-${data.ticketId}`)
-      .emit('ticketChatStarted', updatedTicket);
+        .to(`ticket-${data.ticketId}`)
+        .emit('ticketChatStarted', updatedTicket);
 
     return updatedTicket;
   }

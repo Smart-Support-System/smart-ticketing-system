@@ -9,7 +9,12 @@ import { TicketMessage } from './ticket-message.entity';
 import { TicketChatGateway } from './ticket-chat.gateway';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([TicketEntity, TicketMessage])],
+  imports: [
+    TypeOrmModule.forFeature([
+      TicketEntity,
+      TicketMessage,
+    ]),
+  ],
   controllers: [TicketsController],
   providers: [TicketsService, TicketChatGateway],
 })

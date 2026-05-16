@@ -110,6 +110,7 @@ export class TicketsService {
     return tickets.map((ticket) => this.toFrontendTicket(ticket));
   }
 
+
   async findArchived(currentUser: CurrentUser): Promise<Ticket[]> {
     if (currentUser.role !== 'admin') {
       throw new NotFoundException('Archived tickets not found');
@@ -254,129 +255,129 @@ export class TicketsService {
 
     return { message: `Ticket with ID ${id} archived successfully` };
   }
-  async deleteArchived(
-    id: number,
-    currentUser: CurrentUser,
-  ): Promise<{ message: string }> {
-    if (currentUser.role !== 'admin') {
-      throw new NotFoundException(`Ticket with ID ${id} not found`);
+    async deleteArchived(
+      id: number,
+      currentUser: CurrentUser,
+    ): Promise<{ message: string }> {
+      if (currentUser.role !== 'admin') {
+        throw new NotFoundException(`Ticket with ID ${id} not found`);
+      }
+
+      const ticket = await this.ticketRepository.findOne({
+        where: { ticketId: id, isArchived: true },
+      });
+
+      if (!ticket) {
+        throw new NotFoundException(`Archived ticket with ID ${id} not found`);
+      }
+
+      await this.ticketRepository.delete({ ticketId: id });
+
+      return { message: `Archived ticket with ID ${id} deleted permanently` };
     }
 
-    const ticket = await this.ticketRepository.findOne({
-      where: { ticketId: id, isArchived: true },
-    });
+    async startChat(ticketId: number, currentUser: CurrentUser) {
+      if (!currentUser) {
+        throw new ForbiddenException('You must be logged in to start chat');
+      }
 
-    if (!ticket) {
-      throw new NotFoundException(`Archived ticket with ID ${id} not found`);
+      const ticket = await this.ticketRepository.findOne({
+        where: { ticketId },
+      });
+
+      if (!ticket) {
+        throw new NotFoundException('Ticket not found');
+      }
+
+      const isStaff =
+        currentUser.role === 'agent' || currentUser.role === 'admin';
+
+      if (!isStaff) {
+        throw new ForbiddenException('Only an Agent or Admin can start the chat');
+      }
+
+      ticket.chatStarted = true;
+
+      return this.ticketRepository.save(ticket);
     }
 
-    await this.ticketRepository.delete({ ticketId: id });
+    async getMessages(ticketId: number, currentUser: CurrentUser) {
+      const ticket = await this.ticketRepository.findOne({
+        where: { ticketId },
+      });
 
-    return { message: `Archived ticket with ID ${id} deleted permanently` };
-  }
+      if (!ticket) {
+        throw new NotFoundException('Ticket not found');
+      }
 
-  async startChat(ticketId: number, currentUser: CurrentUser) {
-    if (!currentUser) {
-      throw new ForbiddenException('You must be logged in to start chat');
+      const isOwner = ticket.userId === currentUser.user_id;
+      const isStaff =
+        currentUser.role === 'agent' || currentUser.role === 'admin';
+
+      if (!isOwner && !isStaff) {
+        throw new ForbiddenException('Access denied');
+      }
+
+      if (!ticket.chatStarted) {
+        throw new ForbiddenException('Chat has not been started yet');
+      }
+
+      return this.messageRepository.find({
+        where: { ticketId },
+        relations: ['sender'],
+        order: { createdAt: 'ASC' },
+      });
     }
 
-    const ticket = await this.ticketRepository.findOne({
-      where: { ticketId },
-    });
-
-    if (!ticket) {
-      throw new NotFoundException('Ticket not found');
-    }
-
-    const isStaff =
-      currentUser.role === 'agent' || currentUser.role === 'admin';
-
-    if (!isStaff) {
-      throw new ForbiddenException('Only an Agent or Admin can start the chat');
-    }
-
-    ticket.chatStarted = true;
-
-    return this.ticketRepository.save(ticket);
-  }
-
-  async getMessages(ticketId: number, currentUser: CurrentUser) {
-    const ticket = await this.ticketRepository.findOne({
-      where: { ticketId },
-    });
-
-    if (!ticket) {
-      throw new NotFoundException('Ticket not found');
-    }
-
-    const isOwner = ticket.userId === currentUser.user_id;
-    const isStaff =
-      currentUser.role === 'agent' || currentUser.role === 'admin';
-
-    if (!isOwner && !isStaff) {
-      throw new ForbiddenException('Access denied');
-    }
-
-    if (!ticket.chatStarted) {
-      throw new ForbiddenException('Chat has not been started yet');
-    }
-
-    return this.messageRepository.find({
-      where: { ticketId },
-      relations: ['sender'],
-      order: { createdAt: 'ASC' },
-    });
-  }
-
-  async sendMessage(
-    ticketId: number,
-    createTicketMessageDto: CreateTicketMessageDto,
-    currentUser: CurrentUser,
-  ) {
-    const ticket = await this.ticketRepository.findOne({
-      where: { ticketId },
-    });
-
-    if (!ticket) {
-      throw new NotFoundException('Ticket not found');
-    }
-
-    const isOwner = ticket.userId === currentUser.user_id;
-    const isStaff =
-      currentUser.role === 'agent' || currentUser.role === 'admin';
-
-    if (!isOwner && !isStaff) {
-      throw new ForbiddenException('Access denied');
-    }
-
-    if (!ticket.chatStarted) {
-      throw new ForbiddenException('Chat has not been started yet');
-    }
-
-    if (
-      !createTicketMessageDto.messageText ||
-      createTicketMessageDto.messageText.trim() === ''
+    async sendMessage(
+      ticketId: number,
+      createTicketMessageDto: CreateTicketMessageDto,
+      currentUser: CurrentUser,
     ) {
-      throw new BadRequestException('Message cannot be empty');
+      const ticket = await this.ticketRepository.findOne({
+        where: { ticketId },
+      });
+
+      if (!ticket) {
+        throw new NotFoundException('Ticket not found');
+      }
+
+      const isOwner = ticket.userId === currentUser.user_id;
+      const isStaff =
+        currentUser.role === 'agent' || currentUser.role === 'admin';
+
+      if (!isOwner && !isStaff) {
+        throw new ForbiddenException('Access denied');
+      }
+
+      if (!ticket.chatStarted) {
+        throw new ForbiddenException('Chat has not been started yet');
+      }
+
+      if (
+        !createTicketMessageDto.messageText ||
+        createTicketMessageDto.messageText.trim() === ''
+      ) {
+        throw new BadRequestException('Message cannot be empty');
+      }
+
+      const message = this.messageRepository.create({
+        ticketId,
+        senderUserId: currentUser.user_id,
+        messageText: createTicketMessageDto.messageText,
+      });
+
+      const savedMessage = await this.messageRepository.save(message);
+
+      const messageWithSender = await this.messageRepository.findOne({
+        where: { messageId: savedMessage.messageId },
+        relations: ['sender'],
+      });
+
+      if (!messageWithSender) {
+        throw new NotFoundException('Message not found');
+      }
+
+      return messageWithSender;
     }
-
-    const message = this.messageRepository.create({
-      ticketId,
-      senderUserId: currentUser.user_id,
-      messageText: createTicketMessageDto.messageText,
-    });
-
-    const savedMessage = await this.messageRepository.save(message);
-
-    const messageWithSender = await this.messageRepository.findOne({
-      where: { messageId: savedMessage.messageId },
-      relations: ['sender'],
-    });
-
-    if (!messageWithSender) {
-      throw new NotFoundException('Message not found');
-    }
-
-    return messageWithSender;
   }
-}
