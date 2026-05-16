@@ -7,10 +7,7 @@ import { AuthController } from './auth.controller';
 import { LocalStrategy } from './local.strategy';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([User]),
-    PassportModule,
-  ],
+  imports: [TypeOrmModule.forFeature([User]), PassportModule],
   providers: [AuthService, LocalStrategy],
   controllers: [AuthController],
 })
