@@ -531,4 +531,56 @@ describe('TicketsService', () => {
       );
     });
   });
+
+  // Test startChat added by Michael Hahm
+  describe('startChat', () => {
+    it('should allow an agent to start a ticket chat', async () => {
+      const staffUser = { user_id: 2, role: 'agent' as const };
+
+      const mockTicket = {
+        ticketId: 1,
+        title: 'Test Ticket',
+        description: 'Test Description',
+        ticketPriority: 'medium',
+        ticketStatus: 'open',
+        userId: 1,
+        user: { name: 'Test User', email: 'test@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
+      };
+
+      ticketRepository.findOne.mockResolvedValueOnce(mockTicket);
+      ticketRepository.save.mockResolvedValueOnce({
+        ...mockTicket,
+        chatStarted: true,
+      });
+
+      const result = await service.startChat(1, staffUser);
+
+      expect(ticketRepository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            ticketId: 1,
+          }),
+        }),
+      );
+
+      expect(ticketRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chatStarted: true,
+        }),
+      );
+
+      expect(result).toBeDefined();
+    });
+
+    it('should prevent a regular user from starting a ticket chat', async () => {
+      await expect(service.startChat(1, mockCurrentUser)).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(ticketRepository.save).not.toHaveBeenCalled();
+    });
+  });
 });
