@@ -32,7 +32,10 @@ export class AuthService {
     const user = await this.usersRepository.findOne({ where: { email } });
 
     // Compare provided password with stored hash
-    if (user && await bcrypt.compare(pass, user.password_hash.toString('utf-8'))) {
+    if (
+      user &&
+      (await bcrypt.compare(pass, user.password_hash.toString('utf-8')))
+    ) {
       return user;
     }
     return null;

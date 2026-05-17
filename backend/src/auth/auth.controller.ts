@@ -18,10 +18,9 @@ export class AuthController {
   @UseGuards(AuthGuard('local'))
   @Post('login')
   login(@Request() req): any {
-    req.session.user = req.user;
-    
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    req.session.user = req.user; // Save user session
     const { password_hash, ...safeUser } = req.user;
-
     return {
       message: 'Login successful',
       user: safeUser,

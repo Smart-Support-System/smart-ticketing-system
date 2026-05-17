@@ -14,11 +14,9 @@ export class TicketMessage {
   @PrimaryGeneratedColumn({ name: 'message_id' })
   messageId!: number;
 
-  @ManyToOne(
-    () => TicketEntity,
-    (ticket) => ticket.messages,
-    { onDelete: 'CASCADE' },
-  )
+  @ManyToOne(() => TicketEntity, (ticket) => ticket.messages, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'ticket_id' })
   ticket!: TicketEntity;
 
