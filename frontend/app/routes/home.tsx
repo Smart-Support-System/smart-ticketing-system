@@ -389,9 +389,8 @@ export default function Home() {
 
       const newTicket: Ticket = await response.json();
 
-      const updatedTickets = [newTicket, ...tickets];
-      setTickets(updatedTickets);
-      setSelectedTicketId(newTicket.id);
+      setTotalTickets((prev) => prev + 1);
+      setCurrentPage(0);
       setShowCreateForm(false);
 
       setFormData({
@@ -399,6 +398,8 @@ export default function Home() {
         description: "",
         priority: "medium",
       });
+
+      await fetchTickets();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Something went wrong."
@@ -900,63 +901,55 @@ export default function Home() {
           ) : (
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
-                Main Ticket Details
+                Tickets
               </h2>
               <p className="mt-1 text-sm text-gray-600">
-                Select a ticket from the sidebar to view its details.
+                View and manage tickets for this page.
               </p>
 
               {loading ? (
                 <p className="mt-6 text-gray-600">Loading tickets...</p>
-              ) : selectedTicket ? (
-                <div className="mt-6 space-y-6">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="text-3xl font-bold text-gray-900">
-                        {selectedTicket.title}
-                      </h3>
-                    </div>
-
-                    <p className="mt-2 text-sm text-gray-500">
-                      Created {formatDate(selectedTicket.createdAt)}
-                    </p>
+              ) : tickets.length > 0 ? (
+                <div>
+                  <div className="mt-6 space-y-3">
+                    {tickets.map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        className="rounded-2xl border border-gray-200 p-4 cursor-pointer hover:bg-gray-50 transition"
+                        onClick={() => setSelectedTicketId(ticket.id)}
+                      >
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-gray-900">
+                              {ticket.title}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              Submitted by {ticket.customerName} ({ticket.customerEmail})
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Priority: <span className="capitalize font-semibold">{ticket.priority}</span> | Status: <span className="capitalize font-semibold">{ticket.status}</span>
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Created {formatDate(ticket.createdAt)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className={`inline-block px-3 py-1 rounded-lg text-sm font-semibold ${
+                              ticket.status === 'closed' ? 'bg-gray-200 text-gray-800' :
+                              ticket.status === 'in-progress' ? 'bg-yellow-200 text-yellow-800' :
+                              'bg-blue-200 text-blue-800'
+                            }`}>
+                              {ticket.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
-                  <div className="rounded-2xl bg-slate-100 p-5">
-                    <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">
-                      Submitted By
-                    </h4>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {selectedTicket.customerName}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {selectedTicket.customerEmail}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-gray-200 p-5">
-                    <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">
-                      Description
-                    </h4>
-                    <p className="whitespace-pre-wrap text-gray-800">
-                      {selectedTicket.description}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-slate-100 p-5">
-                    <h4 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500">
-                      Ticket Chat
-                    </h4>
-
-                    <TicketChat
-                      ticket={selectedTicket}
-                      currentUser={currentUser}
-                    />
-                  </div>
-
-                  <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-gray-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="mt-6 flex items-center justify-between gap-3">
                     <div className="text-sm text-gray-600">
-                      Page {currentPage + 1} • Showing {tickets.length} of {totalTickets} tickets
+                      Showing {currentPage * pageSize + 1} to {Math.min((currentPage + 1) * pageSize, totalTickets)} of {totalTickets}
                     </div>
                     <div className="flex gap-2">
                       <button
@@ -965,7 +958,7 @@ export default function Home() {
                         disabled={currentPage === 0}
                         className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Previous Page
+                        Previous
                       </button>
                       <button
                         type="button"
@@ -973,14 +966,14 @@ export default function Home() {
                         disabled={!hasMoreTickets}
                         className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        Next Page
+                        Next
                       </button>
                     </div>
                   </div>
                 </div>
               ) : (
                 <p className="mt-6 text-gray-600">
-                  No ticket selected yet. Create one to get started.
+                  No tickets found. Create one to get started.
                 </p>
               )}
             </div>
@@ -993,11 +986,28 @@ export default function Home() {
           ) : null}
         </section>
 
-        <aside className="rounded-2xl bg-white p-5 shadow-sm">
+        <aside className="rounded-2xl bg-white p-5 shadow-sm overflow-y-auto">
           <h2 className="text-xl font-bold text-gray-900">Ticket Info</h2>
 
           {selectedTicket ? (
             <div className="mt-5 space-y-4 text-sm">
+              <div>
+                <p className="font-semibold text-gray-500">Ticket ID</p>
+                <p className="mt-1 text-gray-900">#{selectedTicket.id}</p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-gray-500">Title</p>
+                <p className="mt-1 text-gray-900 font-medium">{selectedTicket.title}</p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-gray-500">Description</p>
+                <p className="mt-1 text-gray-900 whitespace-pre-wrap text-xs">
+                  {selectedTicket.description}
+                </p>
+              </div>
+
               <div>
                 <p className="font-semibold text-gray-500">Date Created</p>
                 <p className="mt-1 text-gray-900">
@@ -1067,6 +1077,14 @@ export default function Home() {
                 )}
               </div>
 
+              <div className="pt-4 border-t">
+                <p className="font-semibold text-gray-500 mb-3">Chat</p>
+                <TicketChat
+                  ticket={selectedTicket}
+                  currentUser={currentUser}
+                />
+              </div>
+
               {isStaff ? (
                 <button
                   type="button"
@@ -1079,7 +1097,7 @@ export default function Home() {
             </div>
           ) : (
             <p className="mt-5 text-sm text-gray-600">
-              Select a ticket to view its details.
+              Select a ticket from the list to view its details.
             </p>
           )}
         </aside>
