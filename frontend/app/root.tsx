@@ -11,7 +11,7 @@ import type { Route } from "./+types/root";
 import process from "process";
 import "./app.css";
 
-const backend_url = process.env.VITE_BACKEND_URL;
+const backend_url = import.meta.env.VITE_BACKEND_URL;
 export const API_BASE_URL = `${backend_url}`;
 
 export const links: Route.LinksFunction = () => [
