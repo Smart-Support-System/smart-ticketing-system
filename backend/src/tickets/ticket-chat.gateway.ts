@@ -11,7 +11,7 @@ import { CreateTicketMessageDto } from './create-ticket-message.dto';
 
 @WebSocketGateway({
   cors: {
-    origin: `${process.env.FRONTEND_HOST}:${process.env.FRONTEND_PORT}`,
+    origin: 'http://localhost:5173',
     credentials: true,
   },
 })
