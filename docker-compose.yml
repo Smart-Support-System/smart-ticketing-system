@@ -2,7 +2,7 @@
 services:
   database:
     # We use a custom postgres image to simplify the initialization process
-    image: ghcr.io/smart-support-system/smart-ticketing-system-database:feature-docker-setup
+    image: ghcr.io/smart-support-system/smart-ticketing-system-database:main
     container_name: database
     restart: always
     environment:
@@ -16,7 +16,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
 
   frontend:
-    image: ghcr.io/smart-support-system/smart-ticketing-system-frontend:feature-docker-setup
+    image: ghcr.io/smart-support-system/smart-ticketing-system-frontend:main
     container_name: frontend
     restart: always
     environment:
@@ -26,7 +26,7 @@ services:
       - "5173:5173"
 
   backend:
-    image: ghcr.io/smart-support-system/smart-ticketing-system-backend:feature-docker-setup
+    image: ghcr.io/smart-support-system/smart-ticketing-system-backend:main
     container_name: backend
     restart: always
     environment:
