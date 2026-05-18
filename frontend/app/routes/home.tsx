@@ -61,6 +61,14 @@ export default function Home() {
   const [archivedTickets, setArchivedTickets] = useState<Ticket[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [adminLoading, setAdminLoading] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [totalTickets, setTotalTickets] = useState<number>(0);
+  const [hasMoreTickets, setHasMoreTickets] = useState<boolean>(false);
+  const [archivedPage, setArchivedPage] = useState<number>(0);
+  const [archivedPageSize, setArchivedPageSize] = useState<number>(10);
+  const [totalArchivedTickets, setTotalArchivedTickets] = useState<number>(0);
+  const [archivedHasMore, setArchivedHasMore] = useState<boolean>(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -72,7 +80,7 @@ export default function Home() {
 
   useEffect(() => {
     void fetchTickets();
-  }, []);
+  }, [currentPage, pageSize]);
 
   const [formData, setFormData] = useState<CreateTicketForm>({
     title: "",
@@ -85,25 +93,39 @@ export default function Home() {
       setLoading(true);
       setErrorMessage("");
 
-      const response = await fetch(`${API_BASE_URL}/tickets`, {
-        credentials: "include",
-      });
+      const offset = currentPage * pageSize;
+      const response = await fetch(
+        `${API_BASE_URL}/tickets?offset=${offset}&limit=${pageSize}`,
+        {
+          credentials: "include",
+        }
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch tickets.");
       }
 
-      const data: Ticket[] = await response.json();
-      setTickets(data);
+      const data = await response.json();
 
-      if (data.length > 0 && selectedTicketId === null) {
-        setSelectedTicketId(data[0].id);
+      const ticketList = Array.isArray(data) ? data : data.data || [];
+      setTickets(ticketList);
+
+      if (data.total !== undefined) {
+        setTotalTickets(data.total);
+        setHasMoreTickets(data.hasMore);
+      } else {
+        setTotalTickets(ticketList.length);
+        setHasMoreTickets(false);
+      }
+
+      if (ticketList.length > 0 && selectedTicketId === null) {
+        setSelectedTicketId(ticketList[0].id);
       }
 
       if (
         selectedTicketId !== null &&
-        !data.some((ticket) => ticket.id === selectedTicketId)
+        !ticketList.some((ticket: any) => ticket.id === selectedTicketId)
       ) {
-        setSelectedTicketId(data.length > 0 ? data[0].id : null);
+        setSelectedTicketId(ticketList.length > 0 ? ticketList[0].id : null);
       }
     } catch (error) {
       setErrorMessage(
@@ -113,10 +135,6 @@ export default function Home() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    void fetchTickets();
-  }, []);
 
   const selectedTicket =
     tickets.find((ticket) => ticket.id === selectedTicketId) ?? null;
@@ -170,16 +188,30 @@ export default function Home() {
       setAdminLoading(true);
       setErrorMessage("");
 
-      const response = await fetch(`${API_BASE_URL}/tickets/archived`, {
-        credentials: "include",
-      });
+      const offset = archivedPage * archivedPageSize;
+      const response = await fetch(
+        `${API_BASE_URL}/tickets/archived?offset=${offset}&limit=${archivedPageSize}`,
+        {
+          credentials: "include",
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch archived tickets.");
       }
 
-      const data: Ticket[] = await response.json();
-      setArchivedTickets(data);
+      const data = await response.json();
+
+      const ticketList = Array.isArray(data) ? data : data.data || [];
+      setArchivedTickets(ticketList);
+
+      if (data.total !== undefined) {
+        setTotalArchivedTickets(data.total);
+        setArchivedHasMore(data.hasMore);
+      } else {
+        setTotalArchivedTickets(ticketList.length);
+        setArchivedHasMore(false);
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Something went wrong."
@@ -215,8 +247,15 @@ export default function Home() {
 
   async function handleOpenArchivedTickets() {
     setActiveView("archived");
+    setArchivedPage(0);
     await fetchArchivedTickets();
   }
+
+  useEffect(() => {
+    if (activeView === "archived") {
+      void fetchArchivedTickets();
+    }
+  }, [archivedPage, archivedPageSize, activeView]);
 
   async function handleOpenUserManagement() {
     setActiveView("users");
@@ -678,35 +717,61 @@ export default function Home() {
               {adminLoading ? (
                 <p className="mt-6 text-gray-600">Loading archived tickets...</p>
               ) : archivedTickets.length > 0 ? (
-                <div className="mt-6 space-y-3">
-                  {archivedTickets.map((ticket) => (
-                    <div
-                      key={ticket.id}
-                      className="rounded-2xl border border-gray-200 p-4"
-                    >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900">
-                            Ticket ID: {ticket.id} — {ticket.title}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            Submitted by {ticket.customerName} ({ticket.customerEmail})
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Priority: {ticket.priority} | Status: {ticket.status}
-                          </p>
-                        </div>
+                <div>
+                  <div className="mt-6 space-y-3">
+                    {archivedTickets.map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        className="rounded-2xl border border-gray-200 p-4"
+                      >
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900">
+                              Ticket ID: {ticket.id} — {ticket.title}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              Submitted by {ticket.customerName} ({ticket.customerEmail})
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Priority: {ticket.priority} | Status: {ticket.status}
+                            </p>
+                          </div>
 
-                        <button
-                          type="button"
-                          onClick={() => void handlePermanentDeleteTicket(ticket)}
-                          className="rounded-xl bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700"
-                        >
-                          Delete Permanently
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => void handlePermanentDeleteTicket(ticket)}
+                            className="rounded-xl bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700"
+                          >
+                            Delete Permanently
+                          </button>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 flex items-center justify-between gap-3">
+                    <div className="text-sm text-gray-600">
+                      Showing {archivedPage * archivedPageSize + 1} to {Math.min((archivedPage + 1) * archivedPageSize, totalArchivedTickets)} of {totalArchivedTickets}
                     </div>
-                  ))}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setArchivedPage(Math.max(0, archivedPage - 1))}
+                        disabled={archivedPage === 0}
+                        className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setArchivedPage(archivedPage + 1)}
+                        disabled={!archivedHasMore}
+                        className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="mt-6 text-gray-600">No archived tickets found.</p>
@@ -878,17 +943,6 @@ export default function Home() {
                     </p>
                   </div>
 
-                  {/* REPLACED WITH TICKET CHAT FOR NOW
-                  <div className="rounded-2xl bg-slate-100 p-5">
-                    <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">
-                      Chat / Attachments
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      Not implemented yet in the backend.
-                    </p>
-                  </div>
-                  */}
-
                   <div className="rounded-2xl bg-slate-100 p-5">
                     <h4 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500">
                       Ticket Chat
@@ -898,6 +952,30 @@ export default function Home() {
                       ticket={selectedTicket}
                       currentUser={currentUser}
                     />
+                  </div>
+
+                  <div className="mt-6 flex flex-col gap-4 rounded-2xl border border-gray-200 p-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="text-sm text-gray-600">
+                      Page {currentPage + 1} • Showing {tickets.length} of {totalTickets} tickets
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                        disabled={currentPage === 0}
+                        className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Previous Page
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={!hasMoreTickets}
+                        className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Next Page
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (

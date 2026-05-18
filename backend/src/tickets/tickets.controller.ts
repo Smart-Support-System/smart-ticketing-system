@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
@@ -18,6 +19,7 @@ import { TicketsService } from './tickets.service';
 
 // Added chat functionality import
 import { CreateTicketMessageDto } from './create-ticket-message.dto';
+import { PaginationDto } from './dto/pagination.dto';
 
 @UseGuards(AuthGuard)
 @Controller('tickets')
@@ -33,13 +35,29 @@ export class TicketsController {
   }
 
   @Get()
-  findAll(@Request() req): Promise<Ticket[]> {
-    return this.ticketsService.findAll(req.session.user);
+  findAll(
+    @Query() paginationDto: PaginationDto,
+    @Request() req,
+  ): Promise<any> {
+    const offset = paginationDto.offset ? parseInt(paginationDto.offset as any) : undefined;
+    const limit = paginationDto.limit ? parseInt(paginationDto.limit as any) : undefined;
+    const pagination = offset !== undefined || limit !== undefined
+      ? { offset, limit }
+      : undefined;
+    return this.ticketsService.findAll(req.session.user, pagination);
   }
 
   @Get('archived')
-  findArchived(@Request() req): Promise<Ticket[]> {
-    return this.ticketsService.findArchived(req.session.user);
+  findArchived(
+    @Query() paginationDto: PaginationDto,
+    @Request() req,
+  ): Promise<any> {
+    const offset = paginationDto.offset ? parseInt(paginationDto.offset as any) : undefined;
+    const limit = paginationDto.limit ? parseInt(paginationDto.limit as any) : undefined;
+    const pagination = offset !== undefined || limit !== undefined
+      ? { offset, limit }
+      : undefined;
+    return this.ticketsService.findArchived(req.session.user, pagination);
   }
 
   @Get(':id')
