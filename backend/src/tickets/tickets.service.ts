@@ -11,10 +11,11 @@ import { Repository } from 'typeorm';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import { TicketEntity } from './ticket.entity';
-import type { Ticket } from './interfaces/ticket.interface';
+import type { Ticket, TicketPriority } from './interfaces/ticket.interface';
 
 import { TicketMessage } from './ticket-message.entity';
 import { CreateTicketMessageDto } from './create-ticket-message.dto';
+import { UpdateTicketPriorityDto } from './dto/update-ticket-priority.dto';
 
 type CurrentUser = {
   user_id: number;
@@ -189,7 +190,7 @@ export class TicketsService {
 
   async updatePriority(
     id: number,
-    priority: 'low' | 'medium' | 'high',
+    priority: UpdateTicketPriorityDto,
     currentUser: CurrentUser,
   ): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
@@ -208,11 +209,7 @@ export class TicketsService {
       throw new NotFoundException(`Ticket with ID ${id} not found`);
     }
 
-    if (priority !== 'low' && priority !== 'medium' && priority !== 'high') {
-      throw new NotFoundException(`Ticket with ID ${id} not found`);
-    }
-
-    ticket.ticketPriority = priority;
+    ticket.ticketPriority = priority.priority;
 
     const updatedTicket = await this.ticketRepository.save(ticket);
 

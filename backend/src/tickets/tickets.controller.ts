@@ -18,6 +18,7 @@ import { TicketsService } from './tickets.service';
 
 // Added chat functionality import
 import { CreateTicketMessageDto } from './create-ticket-message.dto';
+import { UpdateTicketPriorityDto } from './dto/update-ticket-priority.dto';
 
 @UseGuards(AuthGuard)
 @Controller('tickets')
@@ -50,6 +51,19 @@ export class TicketsController {
     return this.ticketsService.findOne(id, req.session.user);
   }
 
+  @Patch(':id/priority')
+  updatePriority(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateTicketPriorityDto: UpdateTicketPriorityDto,
+    @Request() req,
+  ): Promise<Ticket> {
+    return this.ticketsService.updatePriority(
+      id,
+      updateTicketPriorityDto,
+      req.session.user,
+    );
+  }
+  
   @Patch(':id/status')
   updateStatus(
     @Param('id', ParseIntPipe) id: number,
