@@ -26,5 +26,7 @@ RUN dos2unix /docker-entrypoint.d/env.sh
 RUN chmod +x /docker-entrypoint.d/env.sh
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
+RUN dos2unix /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 CMD ["npm", "run", "start"]
