@@ -13,7 +13,7 @@ import "./app.css";
 
 const backend_host = import.meta.env.VITE_BACKEND_HOST ?? 'localhost';
 const backend_port = import.meta.env.VITE_BACKEND_PORT ?? 3000;
-export const API_BASE_URL = `${import.meta.env.VITE_BACKEND_HOST}:${import.meta.env.VITE_BACKEND_PORT}`;
+export const API_BASE_URL = `${backend_host}:${backend_port}`;
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
