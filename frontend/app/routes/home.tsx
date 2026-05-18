@@ -3,6 +3,7 @@ import type { Route } from "./+types/home";
 
 // Added ticket chat functionality import
 import TicketChat from "../components/TicketChat";
+import { API_BASE_URL } from "~/root";
 
 type TicketStatus = "open" | "in-progress" | "closed";
 type TicketPriority = "low" | "medium" | "high";
@@ -32,8 +33,6 @@ type CreateTicketForm = {
   description: string;
   priority: TicketPriority;
 };
-
-const API_BASE_URL = "http://localhost:3000";
 
 export function meta({}: Route.MetaArgs) {
   return [
