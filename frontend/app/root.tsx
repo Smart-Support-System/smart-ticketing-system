@@ -11,9 +11,8 @@ import type { Route } from "./+types/root";
 import process from "process";
 import "./app.css";
 
-const backend_host = 'localhost';
-const backend_port = 3000;
-export const API_BASE_URL = `${backend_host}:${backend_port}`;
+const backend_url = process.env.VITE_BACKEND_URL;
+export const API_BASE_URL = `${backend_url}`;
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
