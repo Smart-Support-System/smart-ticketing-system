@@ -60,6 +60,12 @@ export default function Home() {
   const [archivedTickets, setArchivedTickets] = useState<Ticket[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [adminLoading, setAdminLoading] = useState<boolean>(false);
+  const [selectedStatuses, setSelectedStatuses] = useState<Set<TicketStatus>>(
+    new Set(["open", "in-progress", "closed"])
+  );
+  const [selectedPriorities, setSelectedPriorities] = useState<Set<TicketPriority>>(
+    new Set(["low", "medium", "high"])
+  );
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [pageSize, setPageSize] = useState<number>(10);
   const [totalTickets, setTotalTickets] = useState<number>(0);
@@ -147,23 +153,35 @@ export default function Home() {
 
   const recentTickets = useMemo(() => {
     return [...tickets]
+      .filter(
+        (ticket) =>
+          selectedStatuses.has(ticket.status) &&
+          selectedPriorities.has(ticket.priority)
+      )
       .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
       .slice(0, 5);
-  }, [tickets]);
+  }, [tickets, selectedStatuses, selectedPriorities]);
 
   const openTickets = useMemo(() => {
     return tickets.filter(
       (ticket) =>
-        ticket.status === "open" || ticket.status === "in-progress"
+        (ticket.status === "open" || ticket.status === "in-progress") &&
+        selectedStatuses.has(ticket.status) &&
+        selectedPriorities.has(ticket.priority)
     );
-  }, [tickets]);
+  }, [tickets, selectedStatuses, selectedPriorities]);
 
   const closedTickets = useMemo(() => {
-    return tickets.filter((ticket) => ticket.status === "closed");
-  }, [tickets]);
+    return tickets.filter(
+      (ticket) =>
+        ticket.status === "closed" &&
+        selectedStatuses.has(ticket.status) &&
+        selectedPriorities.has(ticket.priority)
+    );
+  }, [tickets, selectedStatuses, selectedPriorities]);
 
   function handleInputChange(
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -180,6 +198,30 @@ export default function Home() {
       ...current,
       [section]: !current[section],
     }));
+  }
+
+  function toggleStatusFilter(status: TicketStatus) {
+    setSelectedStatuses((current) => {
+      const updated = new Set(current);
+      if (updated.has(status)) {
+        updated.delete(status);
+      } else {
+        updated.add(status);
+      }
+      return updated;
+    });
+  }
+
+  function togglePriorityFilter(priority: TicketPriority) {
+    setSelectedPriorities((current) => {
+      const updated = new Set(current);
+      if (updated.has(priority)) {
+        updated.delete(priority);
+      } else {
+        updated.add(priority);
+      }
+      return updated;
+    });
   }
 
   async function fetchArchivedTickets() {
@@ -588,6 +630,46 @@ export default function Home() {
               {showCreateForm ? "Close Ticket Form" : "Create New Ticket"}
             </button>
           ) : null}
+
+          <div className="mb-6 rounded-xl bg-slate-50 p-4">
+            <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
+              Filters
+            </h3>
+
+            <div className="mb-4">
+              <p className="mb-2 text-xs font-semibold text-gray-600">Status</p>
+              <div className="space-y-2">
+                {["open", "in-progress", "closed"].map((status) => (
+                  <label key={status} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedStatuses.has(status as TicketStatus)}
+                      onChange={() => toggleStatusFilter(status as TicketStatus)}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <span className="text-sm text-gray-700 capitalize">{status}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <p className="mb-2 text-xs font-semibold text-gray-600">Priority</p>
+              <div className="space-y-2">
+                {["low", "medium", "high"].map((priority) => (
+                  <label key={priority} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedPriorities.has(priority as TicketPriority)}
+                      onChange={() => togglePriorityFilter(priority as TicketPriority)}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    <span className="text-sm text-gray-700 capitalize">{priority}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
 
           <div className="space-y-4">
             <section>
