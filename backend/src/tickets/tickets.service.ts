@@ -11,10 +11,12 @@ import { Repository } from 'typeorm';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketStatusDto } from './dto/update-ticket-status.dto';
 import { TicketEntity } from './ticket.entity';
-import type { Ticket } from './interfaces/ticket.interface';
+import type { Ticket, TicketPriority } from './interfaces/ticket.interface';
 
 import { TicketMessage } from './ticket-message.entity';
 import { CreateTicketMessageDto } from './create-ticket-message.dto';
+import { UpdateTicketPriorityDto } from './dto/update-ticket-priority.dto';
+import { PaginationDto, PaginatedResponse } from './dto/pagination.dto';
 
 type CurrentUser = {
   user_id: number;
@@ -95,33 +97,61 @@ export class TicketsService {
     return this.toFrontendTicket(ticketWithUser);
   }
 
-  async findAll(currentUser: CurrentUser): Promise<Ticket[]> {
+  async findAll(
+    currentUser: CurrentUser,
+    paginationDto?: PaginationDto,
+  ): Promise<Ticket[] | PaginatedResponse<Ticket>> {
     const isStaff =
       currentUser.role === 'agent' || currentUser.role === 'admin';
 
-    const tickets = await this.ticketRepository.find({
+    const offset = paginationDto?.offset || 0;
+    const limit = paginationDto?.limit || 10;
+
+    const [tickets, total] = await this.ticketRepository.findAndCount({
       where: isStaff
         ? { isArchived: false }
         : { userId: currentUser.user_id, isArchived: false },
       relations: ['user'],
       order: { createdDate: 'DESC' },
+      skip: offset,
+      take: limit,
     });
 
-    return tickets.map((ticket) => this.toFrontendTicket(ticket));
+    const frontendTickets = tickets.map((ticket) => this.toFrontendTicket(ticket));
+
+    if (paginationDto) {
+      return new PaginatedResponse(frontendTickets, total, offset, limit);
+    }
+
+    return frontendTickets;
   }
 
-  async findArchived(currentUser: CurrentUser): Promise<Ticket[]> {
+  async findArchived(
+    currentUser: CurrentUser,
+    paginationDto?: PaginationDto,
+  ): Promise<Ticket[] | PaginatedResponse<Ticket>> {
     if (currentUser.role !== 'admin') {
       throw new NotFoundException('Archived tickets not found');
     }
 
-    const tickets = await this.ticketRepository.find({
+    const offset = paginationDto?.offset || 0;
+    const limit = paginationDto?.limit || 10;
+
+    const [tickets, total] = await this.ticketRepository.findAndCount({
       where: { isArchived: true },
       relations: ['user'],
       order: { createdDate: 'DESC' },
+      skip: offset,
+      take: limit,
     });
 
-    return tickets.map((ticket) => this.toFrontendTicket(ticket));
+    const frontendTickets = tickets.map((ticket) => this.toFrontendTicket(ticket));
+
+    if (paginationDto) {
+      return new PaginatedResponse(frontendTickets, total, offset, limit);
+    }
+
+    return frontendTickets;
   }
 
   async findOne(id: number, currentUser: CurrentUser): Promise<Ticket> {
@@ -189,7 +219,7 @@ export class TicketsService {
 
   async updatePriority(
     id: number,
-    priority: 'low' | 'medium' | 'high',
+    priority: UpdateTicketPriorityDto,
     currentUser: CurrentUser,
   ): Promise<Ticket> {
     const ticket = await this.ticketRepository.findOne({
@@ -208,11 +238,7 @@ export class TicketsService {
       throw new NotFoundException(`Ticket with ID ${id} not found`);
     }
 
-    if (priority !== 'low' && priority !== 'medium' && priority !== 'high') {
-      throw new NotFoundException(`Ticket with ID ${id} not found`);
-    }
-
-    ticket.ticketPriority = priority;
+    ticket.ticketPriority = priority.priority;
 
     const updatedTicket = await this.ticketRepository.save(ticket);
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import {io, Socket } from "socket.io-client"
+import { API_BASE_URL } from "~/root";
 
 type UserRole = "user" | "agent" | "admin";
 
@@ -34,8 +35,6 @@ type TicketChatProps = {
   ticket: Ticket;
   currentUser: CurrentUser | null;
 };
-
-const API_BASE_URL = "http://localhost:3000";
 
 let socket: Socket | null = null;
 

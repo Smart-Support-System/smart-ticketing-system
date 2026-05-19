@@ -47,6 +47,7 @@ describe('TicketsService', () => {
       ),
       find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn().mockResolvedValue(null),
+      findAndCount: jest.fn().mockResolvedValue([[], 0]),
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
       create: jest.fn().mockImplementation((entity) => ({
         ticketId: 1,
@@ -206,7 +207,7 @@ describe('TicketsService', () => {
         },
       ];
 
-      ticketRepository.find.mockResolvedValueOnce(mockTickets);
+      ticketRepository.findAndCount.mockResolvedValueOnce([mockTickets, 2]);
 
       const result = await service.findAll(mockCurrentUser);
 
@@ -231,11 +232,11 @@ describe('TicketsService', () => {
         },
       ];
 
-      ticketRepository.find.mockResolvedValueOnce(mockTickets);
+      ticketRepository.findAndCount.mockResolvedValueOnce([mockTickets, 1]);
 
       const result = await service.findAll(mockCurrentUser);
 
-      expect(ticketRepository.find).toHaveBeenCalledWith(
+      expect(ticketRepository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             userId: mockCurrentUser.user_id,
@@ -529,6 +530,58 @@ describe('TicketsService', () => {
       await expect(service.deleteArchived(1, mockAdminUser)).rejects.toThrow(
         NotFoundException,
       );
+    });
+  });
+
+  // Test startChat added by Michael Hahm
+  describe('startChat', () => {
+    it('should allow an agent to start a ticket chat', async () => {
+      const staffUser = { user_id: 2, role: 'agent' as const };
+
+      const mockTicket = {
+        ticketId: 1,
+        title: 'Test Ticket',
+        description: 'Test Description',
+        ticketPriority: 'medium',
+        ticketStatus: 'open',
+        userId: 1,
+        user: { name: 'Test User', email: 'test@example.com' },
+        createdDate: new Date(),
+        isArchived: false,
+        chatStarted: false,
+      };
+
+      ticketRepository.findOne.mockResolvedValueOnce(mockTicket);
+      ticketRepository.save.mockResolvedValueOnce({
+        ...mockTicket,
+        chatStarted: true,
+      });
+
+      const result = await service.startChat(1, staffUser);
+
+      expect(ticketRepository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            ticketId: 1,
+          }),
+        }),
+      );
+
+      expect(ticketRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          chatStarted: true,
+        }),
+      );
+
+      expect(result).toBeDefined();
+    });
+
+    it('should prevent a regular user from starting a ticket chat', async () => {
+      await expect(service.startChat(1, mockCurrentUser)).rejects.toThrow(
+        NotFoundException,
+      );
+
+      expect(ticketRepository.save).not.toHaveBeenCalled();
     });
   });
 });

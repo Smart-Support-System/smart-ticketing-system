@@ -1,16 +1,49 @@
+# Replace REPLACEURL with your respective IP or domain. For testing purposes, I'd recommend using the internal IP of the host machine
 services:
-  db:
-    image: postgres:16
+  database:
+    # We use a custom postgres image to simplify the initialization process
+    image: ghcr.io/smart-support-system/smart-ticketing-system-database:main
+    container_name: database
     restart: always
     environment:
-      POSTGRES_USER: user
+      # Must match backend environment variables
+      POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
       POSTGRES_DB: smart_support_db
     ports:
       - "5432:5432"
     volumes:
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
       - postgres_data:/var/lib/postgresql/data
+
+  frontend:
+    image: ghcr.io/smart-support-system/smart-ticketing-system-frontend:main
+    container_name: frontend
+    restart: always
+    environment:
+      VITE_BACKEND_URL: http://REPLACEURL:3000 # Must match backend URL
+      PORT: 5173
+    ports:
+      - "5173:5173"
+
+  backend:
+    image: ghcr.io/smart-support-system/smart-ticketing-system-backend:main
+    container_name: backend
+    restart: always
+    environment:
+      DB_HOST: REPLACEURL
+      DB_PORT: 5432
+      DB_USERNAME: postgres
+      DB_PASSWORD: password
+      DB_NAME: smart_support_db
+      FRONTEND_HOST: http://REPLACEURL
+      FRONTEND_PORT: 5173
+      SESSION_SECRET: REPLACETHISWITHSOMETHINGSECURE # This should not be used in production. Replace with something more secure.
+      BACKEND_HOST: http://REPLACEURL
+      BACKEND_PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - database
 
 volumes:
   postgres_data:

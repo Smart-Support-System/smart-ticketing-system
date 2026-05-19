@@ -8,7 +8,10 @@ import {
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import process from "process";
 import "./app.css";
+
+export const API_BASE_URL = `${import.meta.env.VITE_BACKEND_URL}`;
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
