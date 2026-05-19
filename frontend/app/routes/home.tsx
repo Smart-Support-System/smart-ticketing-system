@@ -705,7 +705,7 @@ export default function Home() {
           </div>
         </aside>
 
-        <section className="rounded-2xl bg-white p-6 shadow-sm max-h-64 overflow-y-auto">
+        <section className="rounded-2xl bg-white p-6 shadow-sm max-h-100 overflow-y-auto">
           {activeView === "archived" ? (
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
