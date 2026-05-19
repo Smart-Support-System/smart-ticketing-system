@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
+import { API_BASE_URL } from "~/root";
 
 export default function Signup() {
   const [name, setName] = useState<string>("");
@@ -28,7 +29,7 @@ export default function Signup() {
       setError(null);
       setSuccess(null);
 
-      const response = await fetch("http://localhost:3000/auth/register", {
+      const response = await fetch(API_BASE_URL + "/auth/register", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

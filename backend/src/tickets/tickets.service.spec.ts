@@ -47,6 +47,7 @@ describe('TicketsService', () => {
       ),
       find: jest.fn().mockResolvedValue([]),
       findOne: jest.fn().mockResolvedValue(null),
+      findAndCount: jest.fn().mockResolvedValue([[], 0]),
       delete: jest.fn().mockResolvedValue({ affected: 1 }),
       create: jest.fn().mockImplementation((entity) => ({
         ticketId: 1,
@@ -206,7 +207,7 @@ describe('TicketsService', () => {
         },
       ];
 
-      ticketRepository.find.mockResolvedValueOnce(mockTickets);
+      ticketRepository.findAndCount.mockResolvedValueOnce([mockTickets, 2]);
 
       const result = await service.findAll(mockCurrentUser);
 
@@ -231,11 +232,11 @@ describe('TicketsService', () => {
         },
       ];
 
-      ticketRepository.find.mockResolvedValueOnce(mockTickets);
+      ticketRepository.findAndCount.mockResolvedValueOnce([mockTickets, 1]);
 
       const result = await service.findAll(mockCurrentUser);
 
-      expect(ticketRepository.find).toHaveBeenCalledWith(
+      expect(ticketRepository.findAndCount).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
             userId: mockCurrentUser.user_id,

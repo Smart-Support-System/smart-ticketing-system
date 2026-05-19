@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 //import type { Route } from "./+types/login"; // might delete this line later (used for testing)
 import { useNavigate } from 'react-router';
+import { API_BASE_URL } from '~/root';
 
 export default function Login() {
   const [email, setEmail] = useState<string>('');
@@ -20,7 +21,7 @@ export default function Login() {
     try {
       setError(null);
 
-      const response = await fetch('http://localhost:3000/auth/login', {
+      const response = await fetch(API_BASE_URL + '/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
