@@ -610,8 +610,8 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-200 p-6">
-      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-6 lg:grid-cols-[280px_minmax(0,1fr)_260px]">
-        <aside className="flex h-full flex-col rounded-2xl bg-white p-5 shadow-sm">
+      <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:auto-rows-max">
+        <aside className="flex h-full flex-col rounded-2xl bg-white p-5 shadow-sm lg:row-span-2">
           <div className="mb-6">
             <h1 className="text-2xl font-bold text-gray-900">
               Smart Support
@@ -765,10 +765,10 @@ export default function Home() {
             </div>
           ) : null}
 
-          <div className="mt-auto pt-6">
+          <div className="mt-6">
             {currentUser && (
               <div>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="text-sm text-gray-600">
                   Logged in as {currentUser.name} ({currentUser.email})
                 </p>
 
@@ -777,7 +777,7 @@ export default function Home() {
                     localStorage.removeItem("currentUser");
                     window.location.href = "/";
                   }}
-                  className="mt-4 w-2/3 rounded-xl bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
+                  className="mt-2 w-2/3 rounded-xl bg-red-600 px-3 py-2 text-sm font-semibold text-white hover:bg-red-700"
                 >
                   Logout
                 </button>
@@ -786,7 +786,7 @@ export default function Home() {
           </div>
         </aside>
 
-        <section className="rounded-2xl bg-white p-6 shadow-sm">
+        <section className="rounded-2xl bg-white p-6 shadow-sm max-h-100 overflow-y-auto">
           {activeView === "archived" ? (
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
