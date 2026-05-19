@@ -61,6 +61,14 @@ export default function Home() {
   const [archivedTickets, setArchivedTickets] = useState<Ticket[]>([]);
   const [users, setUsers] = useState<AppUser[]>([]);
   const [adminLoading, setAdminLoading] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(0);
+  const [pageSize, setPageSize] = useState<number>(10);
+  const [totalTickets, setTotalTickets] = useState<number>(0);
+  const [hasMoreTickets, setHasMoreTickets] = useState<boolean>(false);
+  const [archivedPage, setArchivedPage] = useState<number>(0);
+  const [archivedPageSize, setArchivedPageSize] = useState<number>(10);
+  const [totalArchivedTickets, setTotalArchivedTickets] = useState<number>(0);
+  const [archivedHasMore, setArchivedHasMore] = useState<boolean>(false);
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -72,7 +80,7 @@ export default function Home() {
 
   useEffect(() => {
     void fetchTickets();
-  }, []);
+  }, [currentPage, pageSize]);
 
   const [formData, setFormData] = useState<CreateTicketForm>({
     title: "",
@@ -85,25 +93,39 @@ export default function Home() {
       setLoading(true);
       setErrorMessage("");
 
-      const response = await fetch(`${API_BASE_URL}/tickets`, {
-        credentials: "include",
-      });
+      const offset = currentPage * pageSize;
+      const response = await fetch(
+        `${API_BASE_URL}/tickets?offset=${offset}&limit=${pageSize}`,
+        {
+          credentials: "include",
+        }
+      );
       if (!response.ok) {
         throw new Error("Failed to fetch tickets.");
       }
 
-      const data: Ticket[] = await response.json();
-      setTickets(data);
+      const data = await response.json();
 
-      if (data.length > 0 && selectedTicketId === null) {
-        setSelectedTicketId(data[0].id);
+      const ticketList = Array.isArray(data) ? data : data.data || [];
+      setTickets(ticketList);
+
+      if (data.total !== undefined) {
+        setTotalTickets(data.total);
+        setHasMoreTickets(data.hasMore);
+      } else {
+        setTotalTickets(ticketList.length);
+        setHasMoreTickets(false);
+      }
+
+      if (ticketList.length > 0 && selectedTicketId === null) {
+        setSelectedTicketId(ticketList[0].id);
       }
 
       if (
         selectedTicketId !== null &&
-        !data.some((ticket) => ticket.id === selectedTicketId)
+        !ticketList.some((ticket: any) => ticket.id === selectedTicketId)
       ) {
-        setSelectedTicketId(data.length > 0 ? data[0].id : null);
+        setSelectedTicketId(ticketList.length > 0 ? ticketList[0].id : null);
       }
     } catch (error) {
       setErrorMessage(
@@ -113,10 +135,6 @@ export default function Home() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    void fetchTickets();
-  }, []);
 
   const selectedTicket =
     tickets.find((ticket) => ticket.id === selectedTicketId) ?? null;
@@ -170,16 +188,30 @@ export default function Home() {
       setAdminLoading(true);
       setErrorMessage("");
 
-      const response = await fetch(`${API_BASE_URL}/tickets/archived`, {
-        credentials: "include",
-      });
+      const offset = archivedPage * archivedPageSize;
+      const response = await fetch(
+        `${API_BASE_URL}/tickets/archived?offset=${offset}&limit=${archivedPageSize}`,
+        {
+          credentials: "include",
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch archived tickets.");
       }
 
-      const data: Ticket[] = await response.json();
-      setArchivedTickets(data);
+      const data = await response.json();
+
+      const ticketList = Array.isArray(data) ? data : data.data || [];
+      setArchivedTickets(ticketList);
+
+      if (data.total !== undefined) {
+        setTotalArchivedTickets(data.total);
+        setArchivedHasMore(data.hasMore);
+      } else {
+        setTotalArchivedTickets(ticketList.length);
+        setArchivedHasMore(false);
+      }
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Something went wrong."
@@ -215,8 +247,15 @@ export default function Home() {
 
   async function handleOpenArchivedTickets() {
     setActiveView("archived");
+    setArchivedPage(0);
     await fetchArchivedTickets();
   }
+
+  useEffect(() => {
+    if (activeView === "archived") {
+      void fetchArchivedTickets();
+    }
+  }, [archivedPage, archivedPageSize, activeView]);
 
   async function handleOpenUserManagement() {
     setActiveView("users");
@@ -350,9 +389,8 @@ export default function Home() {
 
       const newTicket: Ticket = await response.json();
 
-      const updatedTickets = [newTicket, ...tickets];
-      setTickets(updatedTickets);
-      setSelectedTicketId(newTicket.id);
+      setTotalTickets((prev) => prev + 1);
+      setCurrentPage(0);
       setShowCreateForm(false);
 
       setFormData({
@@ -360,6 +398,8 @@ export default function Home() {
         description: "",
         priority: "medium",
       });
+
+      await fetchTickets();
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Something went wrong."
@@ -678,35 +718,61 @@ export default function Home() {
               {adminLoading ? (
                 <p className="mt-6 text-gray-600">Loading archived tickets...</p>
               ) : archivedTickets.length > 0 ? (
-                <div className="mt-6 space-y-3">
-                  {archivedTickets.map((ticket) => (
-                    <div
-                      key={ticket.id}
-                      className="rounded-2xl border border-gray-200 p-4"
-                    >
-                      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                          <h3 className="text-lg font-bold text-gray-900">
-                            Ticket ID: {ticket.id} — {ticket.title}
-                          </h3>
-                          <p className="text-sm text-gray-600">
-                            Submitted by {ticket.customerName} ({ticket.customerEmail})
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            Priority: {ticket.priority} | Status: {ticket.status}
-                          </p>
-                        </div>
+                <div>
+                  <div className="mt-6 space-y-3">
+                    {archivedTickets.map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        className="rounded-2xl border border-gray-200 p-4"
+                      >
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900">
+                              Ticket ID: {ticket.id} — {ticket.title}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              Submitted by {ticket.customerName} ({ticket.customerEmail})
+                            </p>
+                            <p className="text-sm text-gray-600">
+                              Priority: {ticket.priority} | Status: {ticket.status}
+                            </p>
+                          </div>
 
-                        <button
-                          type="button"
-                          onClick={() => void handlePermanentDeleteTicket(ticket)}
-                          className="rounded-xl bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700"
-                        >
-                          Delete Permanently
-                        </button>
+                          <button
+                            type="button"
+                            onClick={() => void handlePermanentDeleteTicket(ticket)}
+                            className="rounded-xl bg-red-600 px-4 py-3 font-semibold text-white hover:bg-red-700"
+                          >
+                            Delete Permanently
+                          </button>
+                        </div>
                       </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 flex items-center justify-between gap-3">
+                    <div className="text-sm text-gray-600">
+                      Showing {archivedPage * archivedPageSize + 1} to {Math.min((archivedPage + 1) * archivedPageSize, totalArchivedTickets)} of {totalArchivedTickets}
                     </div>
-                  ))}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setArchivedPage(Math.max(0, archivedPage - 1))}
+                        disabled={archivedPage === 0}
+                        className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setArchivedPage(archivedPage + 1)}
+                        disabled={!archivedHasMore}
+                        className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ) : (
                 <p className="mt-6 text-gray-600">No archived tickets found.</p>
@@ -835,74 +901,79 @@ export default function Home() {
           ) : (
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
-                Main Ticket Details
+                Tickets
               </h2>
               <p className="mt-1 text-sm text-gray-600">
-                Select a ticket from the sidebar to view its details.
+                View and manage tickets for this page.
               </p>
 
               {loading ? (
                 <p className="mt-6 text-gray-600">Loading tickets...</p>
-              ) : selectedTicket ? (
-                <div className="mt-6 space-y-6">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <h3 className="text-3xl font-bold text-gray-900">
-                        {selectedTicket.title}
-                      </h3>
+              ) : tickets.length > 0 ? (
+                <div>
+                  <div className="mt-6 space-y-3">
+                    {tickets.map((ticket) => (
+                      <div
+                        key={ticket.id}
+                        className="rounded-2xl border border-gray-200 p-4 cursor-pointer hover:bg-gray-50 transition"
+                        onClick={() => setSelectedTicketId(ticket.id)}
+                      >
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                          <div className="flex-1">
+                            <h3 className="text-lg font-bold text-gray-900">
+                              {ticket.title}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              Submitted by {ticket.customerName} ({ticket.customerEmail})
+                            </p>
+                            <p className="text-sm text-gray-600 mt-1">
+                              Priority: <span className="capitalize font-semibold">{ticket.priority}</span> | Status: <span className="capitalize font-semibold">{ticket.status}</span>
+                            </p>
+                            <p className="text-xs text-gray-500 mt-2">
+                              Created {formatDate(ticket.createdAt)}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <span className={`inline-block px-3 py-1 rounded-lg text-sm font-semibold ${
+                              ticket.status === 'closed' ? 'bg-gray-200 text-gray-800' :
+                              ticket.status === 'in-progress' ? 'bg-yellow-200 text-yellow-800' :
+                              'bg-blue-200 text-blue-800'
+                            }`}>
+                              {ticket.status}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="mt-6 flex items-center justify-between gap-3">
+                    <div className="text-sm text-gray-600">
+                      Showing {currentPage * pageSize + 1} to {Math.min((currentPage + 1) * pageSize, totalTickets)} of {totalTickets}
                     </div>
-
-                    <p className="mt-2 text-sm text-gray-500">
-                      Created {formatDate(selectedTicket.createdAt)}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl bg-slate-100 p-5">
-                    <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">
-                      Submitted By
-                    </h4>
-                    <p className="text-lg font-semibold text-gray-900">
-                      {selectedTicket.customerName}
-                    </p>
-                    <p className="text-sm text-gray-600">
-                      {selectedTicket.customerEmail}
-                    </p>
-                  </div>
-
-                  <div className="rounded-2xl border border-gray-200 p-5">
-                    <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">
-                      Description
-                    </h4>
-                    <p className="whitespace-pre-wrap text-gray-800">
-                      {selectedTicket.description}
-                    </p>
-                  </div>
-
-                  {/* REPLACED WITH TICKET CHAT FOR NOW
-                  <div className="rounded-2xl bg-slate-100 p-5">
-                    <h4 className="mb-2 text-sm font-bold uppercase tracking-wide text-gray-500">
-                      Chat / Attachments
-                    </h4>
-                    <p className="text-sm text-gray-600">
-                      Not implemented yet in the backend.
-                    </p>
-                  </div>
-                  */}
-
-                  <div className="rounded-2xl bg-slate-100 p-5">
-                    <h4 className="mb-4 text-sm font-bold uppercase tracking-wide text-gray-500">
-                      Ticket Chat
-                    </h4>
-
-                    <TicketChat
-                      ticket={selectedTicket}
-                      currentUser={currentUser}
-                    />
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(Math.max(0, currentPage - 1))}
+                        disabled={currentPage === 0}
+                        className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setCurrentPage(currentPage + 1)}
+                        disabled={!hasMoreTickets}
+                        className="rounded-xl border border-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        Next
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
                 <p className="mt-6 text-gray-600">
-                  No ticket selected yet. Create one to get started.
+                  No tickets found. Create one to get started.
                 </p>
               )}
             </div>
@@ -915,11 +986,28 @@ export default function Home() {
           ) : null}
         </section>
 
-        <aside className="rounded-2xl bg-white p-5 shadow-sm">
+        <aside className="rounded-2xl bg-white p-5 shadow-sm overflow-y-auto">
           <h2 className="text-xl font-bold text-gray-900">Ticket Info</h2>
 
           {selectedTicket ? (
             <div className="mt-5 space-y-4 text-sm">
+              <div>
+                <p className="font-semibold text-gray-500">Ticket ID</p>
+                <p className="mt-1 text-gray-900">#{selectedTicket.id}</p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-gray-500">Title</p>
+                <p className="mt-1 text-gray-900 font-medium">{selectedTicket.title}</p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-gray-500">Description</p>
+                <p className="mt-1 text-gray-900 whitespace-pre-wrap text-xs">
+                  {selectedTicket.description}
+                </p>
+              </div>
+
               <div>
                 <p className="font-semibold text-gray-500">Date Created</p>
                 <p className="mt-1 text-gray-900">
@@ -989,6 +1077,14 @@ export default function Home() {
                 )}
               </div>
 
+              <div className="pt-4 border-t">
+                <p className="font-semibold text-gray-500 mb-3">Chat</p>
+                <TicketChat
+                  ticket={selectedTicket}
+                  currentUser={currentUser}
+                />
+              </div>
+
               {isStaff ? (
                 <button
                   type="button"
@@ -1001,7 +1097,7 @@ export default function Home() {
             </div>
           ) : (
             <p className="mt-5 text-sm text-gray-600">
-              Select a ticket to view its details.
+              Select a ticket from the list to view its details.
             </p>
           )}
         </aside>
