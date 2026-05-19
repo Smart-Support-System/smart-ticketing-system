@@ -1,4 +1,5 @@
 export type TicketStatus = 'open' | 'in-progress' | 'closed';
+export type TicketPriority = 'low' | 'medium' | 'high';
 
 export interface Ticket {
   id: number;
@@ -6,7 +7,7 @@ export interface Ticket {
   description: string;
   customerName: string;
   customerEmail: string;
-  priority: 'low' | 'medium' | 'high';
+  priority: TicketPriority;
   status: TicketStatus;
   createdAt: string;
   chatStarted: boolean;
