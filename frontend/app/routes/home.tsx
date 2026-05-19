@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ChangeEvent } from "react";
 import type { Route } from "./+types/home";
 
 // Added ticket chat functionality import
@@ -74,6 +74,7 @@ export default function Home() {
   const [archivedPageSize, setArchivedPageSize] = useState<number>(10);
   const [totalArchivedTickets, setTotalArchivedTickets] = useState<number>(0);
   const [archivedHasMore, setArchivedHasMore] = useState<boolean>(false);
+  const [searchText, setSearchText] = useState<string>('');
 
   useEffect(() => {
     const storedUser = localStorage.getItem("currentUser");
@@ -156,32 +157,38 @@ export default function Home() {
       .filter(
         (ticket) =>
           selectedStatuses.has(ticket.status) &&
-          selectedPriorities.has(ticket.priority)
+          selectedPriorities.has(ticket.priority) &&
+          (ticket.title.includes(searchText) ||
+            ticket.description.includes(searchText))
       )
       .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       )
       .slice(0, 5);
-  }, [tickets, selectedStatuses, selectedPriorities]);
+  }, [tickets, selectedStatuses, selectedPriorities, searchText]);
 
   const openTickets = useMemo(() => {
     return tickets.filter(
       (ticket) =>
         (ticket.status === "open" || ticket.status === "in-progress") &&
         selectedStatuses.has(ticket.status) &&
-        selectedPriorities.has(ticket.priority)
+        selectedPriorities.has(ticket.priority) &&
+        (ticket.title.includes(searchText) ||
+          ticket.description.includes(searchText))
     );
-  }, [tickets, selectedStatuses, selectedPriorities]);
+  }, [tickets, selectedStatuses, selectedPriorities, searchText]);
 
   const closedTickets = useMemo(() => {
     return tickets.filter(
       (ticket) =>
         ticket.status === "closed" &&
         selectedStatuses.has(ticket.status) &&
-        selectedPriorities.has(ticket.priority)
+        selectedPriorities.has(ticket.priority) &&
+        (ticket.title.includes(searchText) ||
+          ticket.description.includes(searchText))
     );
-  }, [tickets, selectedStatuses, selectedPriorities]);
+  }, [tickets, selectedStatuses, selectedPriorities, searchText]);
 
   function handleInputChange(
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -608,6 +615,10 @@ export default function Home() {
     );
   }
 
+  function handleSearchChange(e: ChangeEvent<HTMLInputElement>) {
+    setSearchText(e.target.value);
+  }
+
   return (
     <main className="min-h-screen bg-slate-200 p-6">
       <div className="mx-auto grid max-w-7xl gap-6 lg:grid-cols-[280px_minmax(0,1fr)] lg:auto-rows-max">
@@ -635,6 +646,14 @@ export default function Home() {
             <h3 className="mb-3 text-sm font-bold uppercase tracking-wide text-gray-500">
               Filters
             </h3>
+
+            <input
+              type="search"
+              value={searchText}
+              onChange={handleSearchChange}
+              required
+              className="w-full rounded-xl border border-gray-300 px-4 py-2 mb-2 outline-none focus:border-blue-500"
+            />
 
             <div className="mb-4">
               <p className="mb-2 text-xs font-semibold text-gray-600">Status</p>
